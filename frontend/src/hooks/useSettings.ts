@@ -70,7 +70,7 @@ export const useUpdateProfesor = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Profesor> }) => {
-      const response = await apiClient.put<ApiResponse<Profesor>>(`/profesores/${id}`, data);
+      const response = await apiClient.patch<ApiResponse<Profesor>>(`/profesores/${id}`, data);
       return response.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profesores'] }),
@@ -113,7 +113,7 @@ export const useUpdateSalon = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Salon> }) => {
-      const response = await apiClient.put<ApiResponse<Salon>>(`/salones/${id}`, data);
+      const response = await apiClient.patch<ApiResponse<Salon>>(`/salones/${id}`, data);
       return response.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['salones'] }),

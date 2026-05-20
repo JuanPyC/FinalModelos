@@ -14,15 +14,32 @@ const getErrorMessage = (error: unknown): string => {
   return 'Error interno del servidor';
 };
 
-const toEstadoAsistenciaEnum = (estado: UpdateInscripcionDTO['estado_asistencia']) => {
-  const estadoMap = {
+const VALID_ESTADOS = ['PROGRAMADA', 'ASISTIO', 'FALTO', 'CANCELADA'] as const;
+type EstadoAsistenciaValido = typeof VALID_ESTADOS[number];
+
+const toEstadoAsistenciaEnum = (estado: string): EstadoAsistenciaValido | null => {
+  const estadoMap: Record<string, EstadoAsistenciaValido> = {
     Programada: 'PROGRAMADA',
     'Asistió': 'ASISTIO',
     'Faltó': 'FALTO',
     Cancelada: 'CANCELADA',
-  } as const;
+    programada: 'PROGRAMADA',
+    asistio: 'ASISTIO',
+    asistió: 'ASISTIO',
+    falto: 'FALTO',
+    faltó: 'FALTO',
+    cancelada: 'CANCELADA',
+  };
 
-  return estadoMap[estado];
+  const mapped = estadoMap[estado];
+  if (mapped) return mapped;
+
+  const upper = estado.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (VALID_ESTADOS.includes(upper as EstadoAsistenciaValido)) {
+    return upper as EstadoAsistenciaValido;
+  }
+
+  return null;
 };
 
 export const getInscripciones = async (req: Request, res: Response) => {
@@ -116,8 +133,37 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
 
     const estadoEnum = toEstadoAsistenciaEnum(estado_asistencia);
 
-    // This update triggers PostgreSQL trigger for multa generation when state is Faltó.
-    const inscripcion = await prisma.inscripcion.update({
+    if (!estadoEnum) {
+      return res.status(400).json({
+        success: false,
+        error: `Estado inválido: '${estado_asistencia}'. Valores válidos: ${VALID_ESTADOS.join(', ')}, Asistió, Faltó, Programada, Cancelada`,
+      });
+    }
+
+    const inscripcion = await prisma.inscripcion.findUnique({
+      where: { inscripcion_id: parseInt(id) },
+    });
+
+    if (!inscripcion) {
+      return res.status(404).json({ success: false, error: 'Inscripción no encontrada' });
+    }
+
+    // If changing from FALTO to another state, reverse the multa and adjust balance
+    if (inscripcion.estado_asistencia === 'FALTO' && estadoEnum !== 'FALTO') {
+      const multa = await prisma.multa.findFirst({
+        where: { inscripcion_id: inscripcion.inscripcion_id, estado_pago: 'PENDIENTE' },
+      });
+
+      if (multa) {
+        await prisma.estudiante.update({
+          where: { estudiante_id: inscripcion.estudiante_id },
+          data: { saldo_pendiente: { decrement: multa.monto } },
+        });
+        await prisma.multa.delete({ where: { multa_id: multa.multa_id } });
+      }
+    }
+
+    const updated = await prisma.inscripcion.update({
       where: { inscripcion_id: parseInt(id) },
       data: { estado_asistencia: estadoEnum },
       include: {
@@ -129,7 +175,7 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
 
     res.json({
       success: true,
-      data: inscripcion,
+      data: updated,
       message: 'Asistencia actualizada. Si es Faltó, la multa se genera automáticamente.',
     } as ApiResponse<any>);
   } catch (error) {

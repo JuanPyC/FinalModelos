@@ -49,7 +49,19 @@ export const getMultasPendientes = async (req: Request, res: Response) => {
 export const markMultaPagada = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const multa = await prisma.multa.update({
+    const multa = await prisma.multa.findUnique({
+      where: { multa_id: parseInt(id) },
+    });
+
+    if (!multa) {
+      return res.status(404).json({ success: false, error: 'Multa no encontrada' });
+    }
+
+    if (multa.estado_pago === 'PAGADA') {
+      return res.status(400).json({ success: false, error: 'La multa ya está pagada' });
+    }
+
+    const updated = await prisma.multa.update({
       where: { multa_id: parseInt(id) },
       data: { estado_pago: 'PAGADA' },
       include: { estudiante: true },
@@ -57,10 +69,10 @@ export const markMultaPagada = async (req: Request, res: Response) => {
 
     await prisma.estudiante.update({
       where: { estudiante_id: multa.estudiante_id },
-      data: { saldo_pendiente: { decrement: 10.0 } },
+      data: { saldo_pendiente: { decrement: multa.monto } },
     });
 
-    res.json({ success: true, data: multa, message: 'Multa marcada como pagada' } as ApiResponse<any>);
+    res.json({ success: true, data: updated, message: 'Multa marcada como pagada' } as ApiResponse<any>);
   } catch (error) {
     res.status(500).json({ success: false, error: getErrorMessage(error) });
   }

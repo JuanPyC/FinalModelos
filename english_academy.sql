@@ -34,11 +34,11 @@ CREATE DATABASE english_academy_db
 -- 2. DDL: CREATE ENUMS AND TABLES (3FN NORMALIZED)
 -- ============================================================================
 
--- Enum: Estado de Asistencia (Programada, Asistió, Faltó, Cancelada)
-CREATE TYPE estado_asistencia_enum AS ENUM ('Programada', 'Asistió', 'Faltó', 'Cancelada');
+-- Enum: Estado de Asistencia (PROGRAMADA, ASISTIO, FALTO, CANCELADA)
+CREATE TYPE estado_asistencia_enum AS ENUM ('PROGRAMADA', 'ASISTIO', 'FALTO', 'CANCELADA');
 
--- Enum: Estado de Pago (Pendiente, Pagada)
-CREATE TYPE estado_pago_enum AS ENUM ('Pendiente', 'Pagada');
+-- Enum: Estado de Pago (PENDIENTE, PAGADA)
+CREATE TYPE estado_pago_enum AS ENUM ('PENDIENTE', 'PAGADA');
 
 -- ============================================================================
 -- Table: NIVELES (Base - No FK saliente)
@@ -208,18 +208,18 @@ INSERT INTO ESTUDIANTES (nombre, email, telefono, fecha_nacimiento) VALUES
 
 -- INSCRIPCIONES (10+ registros - relación N:M con estados variados)
 INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia) VALUES
-(1, 1, 'Asistió'),
-(2, 1, 'Faltó'),
-(3, 2, 'Programada'),
-(4, 3, 'Programada'),
-(5, 4, 'Asistió'),
-(6, 5, 'Faltó'),
-(7, 6, 'Programada'),
-(8, 7, 'Programada'),
-(9, 8, 'Asistió'),
-(10, 9, 'Faltó'),
-(11, 10, 'Asistió'),
-(12, 11, 'Cancelada');
+(1, 1, 'ASISTIO'),
+(2, 1, 'FALTO'),
+(3, 2, 'PROGRAMADA'),
+(4, 3, 'PROGRAMADA'),
+(5, 4, 'ASISTIO'),
+(6, 5, 'FALTO'),
+(7, 6, 'PROGRAMADA'),
+(8, 7, 'PROGRAMADA'),
+(9, 8, 'ASISTIO'),
+(10, 9, 'FALTO'),
+(11, 10, 'ASISTIO'),
+(12, 11, 'CANCELADA');
 
 -- MULTAS (Iniciales - algunas ya generadas por faltas anteriores)
 INSERT INTO MULTAS (inscripcion_id, estudiante_id, monto, estado_pago) VALUES
@@ -385,9 +385,9 @@ ORDER BY nombre;
 -- Q15: Reporte de estudiantes y su historial de asistencia
 SELECT e.nombre,
        COUNT(i.inscripcion_id) AS total_sesiones,
-       SUM(CASE WHEN i.estado_asistencia = 'Asistió' THEN 1 ELSE 0 END) AS asistencias,
-       SUM(CASE WHEN i.estado_asistencia = 'Faltó' THEN 1 ELSE 0 END) AS faltas,
-       ROUND(100.0 * SUM(CASE WHEN i.estado_asistencia = 'Asistió' THEN 1 ELSE 0 END) / 
+       SUM(CASE WHEN i.estado_asistencia = 'ASISTIO' THEN 1 ELSE 0 END) AS asistencias,
+       SUM(CASE WHEN i.estado_asistencia = 'FALTO' THEN 1 ELSE 0 END) AS faltas,
+       ROUND(100.0 * SUM(CASE WHEN i.estado_asistencia = 'ASISTIO' THEN 1 ELSE 0 END) / 
              NULLIF(COUNT(i.inscripcion_id), 0), 2) AS porcentaje_asistencia,
        e.saldo_pendiente
 FROM ESTUDIANTES e
@@ -510,9 +510,9 @@ CREATE TRIGGER trg_multa_por_inasistencia
 -- Before: Check initial multas count
 SELECT COUNT(*) AS multas_antes FROM MULTAS;
 
--- Update inscription to 'Faltó'
+-- Update inscription to 'FALTO'
 UPDATE INSCRIPCIONES 
-SET estado_asistencia = 'Faltó' 
+SET estado_asistencia = 'FALTO' 
 WHERE inscripcion_id = 4;
 
 -- After: Verify multa was created
@@ -583,3 +583,6 @@ COMPLETENESS CHECKLIST:
 
 TOTAL: 2.5 pts possible
 */
+ble
+*/
+/

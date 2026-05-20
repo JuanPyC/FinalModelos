@@ -2,6 +2,11 @@ import { Request, Response } from 'express';
 import prisma from '../utils/db';
 import { CreateNivelDTO, ApiResponse } from '../types';
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return 'Error interno del servidor';
+};
+
 export const getNiveles = async (req: Request, res: Response) => {
   try {
     const niveles = await prisma.nivel.findMany({
@@ -9,7 +14,7 @@ export const getNiveles = async (req: Request, res: Response) => {
     });
     res.json({ success: true, data: niveles } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -23,7 +28,7 @@ export const getNivelById = async (req: Request, res: Response) => {
     if (!nivel) return res.status(404).json({ success: false, error: 'Nivel no encontrado' });
     res.json({ success: true, data: nivel } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -40,7 +45,7 @@ export const createNivel = async (req: Request, res: Response) => {
     });
     res.status(201).json({ success: true, data: nivel, message: 'Nivel creado exitosamente' } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -55,7 +60,7 @@ export const updateNivel = async (req: Request, res: Response) => {
     });
     res.json({ success: true, data: nivel, message: 'Nivel actualizado' } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -67,6 +72,6 @@ export const deleteNivel = async (req: Request, res: Response) => {
     });
     res.json({ success: true, message: 'Nivel eliminado' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };

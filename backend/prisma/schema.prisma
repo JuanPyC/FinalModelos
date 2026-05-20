@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EstadoAsistencia {
+  PROGRAMADA @map("Programada")
+  ASISTIO    @map("Asistió")
+  FALTO      @map("Faltó")
+  CANCELADA  @map("Cancelada")
+}
+
+enum EstadoPago {
+  PENDIENTE @map("Pendiente")
+  PAGADA    @map("Pagada")
+}
+
+model Nivel {
+  nivel_id         Int      @id @default(autoincrement())
+  nombre           String   @unique @db.VarChar(10)
+  descripcion      String?
+  duracion_semanas Int
+  precio           Decimal  @db.Decimal(8,2)
+  sesiones         Sesion[]
+
+  @@map("NIVELES")
+}
+
+model Profesor {
+  profesor_id    Int      @id @default(autoincrement())
+  nombre         String   @db.VarChar(80)
+  email          String   @unique @db.VarChar(120)
+  telefono       String?  @db.VarChar(20)
+  especialidad   String   @db.VarChar(10)
+  fecha_contrato DateTime @default(now()) @db.Date
+  activo         Boolean  @default(true)
+  sesiones       Sesion[]
+
+  @@map("PROFESORES")
+}
+
+model Salon {
+  salon_id  Int     @id @default(autoincrement())
+  nombre    String  @unique @db.VarChar(50)
+  capacidad Int
+  equipado  Boolean @default(true)
+  sesiones  Sesion[]
+
+  @@map("SALONES")
+}
+
+model Estudiante {
+  estudiante_id    Int           @id @default(autoincrement())
+  nombre           String        @db.VarChar(100)
+  email            String        @unique @db.VarChar(120)
+  telefono         String?       @db.VarChar(20)
+  fecha_nacimiento DateTime      @db.Date
+  fecha_registro   DateTime      @default(now()) @db.Date
+  saldo_pendiente  Decimal       @default(0) @db.Decimal(10,2)
+  inscripciones    Inscripcion[]
+  multas           Multa[]
+
+  @@map("ESTUDIANTES")
+}
+
+model Sesion {
+  sesion_id         Int           @id @default(autoincrement())
+  nivel_id          Int
+  profesor_id       Int
+  salon_id          Int
+  fecha             DateTime      @db.Date
+  hora_inicio       String        @db.Time
+  duracion_min      Int
+  cupos_disponibles Int
+
+  nivel     Nivel    @relation(fields: [nivel_id], references: [nivel_id])
+  profesor  Profesor @relation(fields: [profesor_id], references: [profesor_id])
+  salon     Salon    @relation(fields: [salon_id], references: [salon_id])
+  inscripciones Inscripcion[]
+
+  @@map("SESIONES")
+}
+
+model Inscripcion {
+  inscripcion_id    Int               @id @default(autoincrement())
+  estudiante_id     Int
+  sesion_id         Int
+  fecha_inscripcion DateTime          @default(now()) @db.Date
+  estado_asistencia EstadoAsistencia  @default(PROGRAMADA)
+
+  estudiante Estudiante @relation(fields: [estudiante_id], references: [estudiante_id])
+  sesion     Sesion     @relation(fields: [sesion_id], references: [sesion_id])
+  multas     Multa[]
+
+  @@unique([estudiante_id, sesion_id])
+  @@map("INSCRIPCIONES")
+}
+
+model Multa {
+  multa_id         Int        @id @default(autoincrement())
+  inscripcion_id   Int
+  estudiante_id    Int
+  monto            Decimal    @default(10) @db.Decimal(8,2)
+  fecha_generacion DateTime   @default(now())
+  estado_pago      EstadoPago @default(PENDIENTE)
+
+  inscripcion Inscripcion @relation(fields: [inscripcion_id], references: [inscripcion_id])
+  estudiante  Estudiante  @relation(fields: [estudiante_id], references: [estudiante_id])
+
+  @@map("MULTAS")
+}
+

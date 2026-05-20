@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: finalmodelos_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: academy
+      POSTGRES_PASSWORD: academy_pass
+      POSTGRES_DB: english_academy_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U academy"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  postgres_data:

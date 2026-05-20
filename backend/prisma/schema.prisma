@@ -4,7 +4,8 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
+  output   = "../generated"
 }
 
 datasource db {
@@ -39,7 +40,7 @@ model Profesor {
   nombre         String   @db.VarChar(80)
   email          String   @unique @db.VarChar(120)
   telefono       String?  @db.VarChar(20)
-  especialidad   String   @db.VarChar(10)
+  especialidad   String   @db.VarChar(50)
   fecha_contrato DateTime @default(now()) @db.Date
   activo         Boolean  @default(true)
   sesiones       Sesion[]
@@ -77,13 +78,13 @@ model Sesion {
   profesor_id       Int
   salon_id          Int
   fecha             DateTime      @db.Date
-  hora_inicio       String        @db.Time
+  hora_inicio       DateTime      @db.Time
   duracion_min      Int
   cupos_disponibles Int
 
-  nivel     Nivel    @relation(fields: [nivel_id], references: [nivel_id])
-  profesor  Profesor @relation(fields: [profesor_id], references: [profesor_id])
-  salon     Salon    @relation(fields: [salon_id], references: [salon_id])
+  nivel         Nivel         @relation(fields: [nivel_id], references: [nivel_id])
+  profesor      Profesor      @relation(fields: [profesor_id], references: [profesor_id])
+  salon         Salon         @relation(fields: [salon_id], references: [salon_id])
   inscripciones Inscripcion[]
 
   @@map("SESIONES")

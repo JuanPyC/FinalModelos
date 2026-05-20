@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useGetSesiones, useInscribirEstudiante, useUpdateAsistencia } from '../hooks/useSesiones';
+import { useGetSesiones, useInscribirEstudiante, useUpdateAsistencia, useCreateSesion } from '../hooks/useSesiones';
 import { useGetEstudiantes } from '../hooks/useEstudiantes';
+import { useGetNiveles, useGetProfesores, useGetSalones } from '../hooks/useSettings';
 import { 
   Calendar, 
   MapPin, 
@@ -8,16 +9,25 @@ import {
   Users,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Plus
 } from 'lucide-react';
 
 export const Sesiones: React.FC = () => {
   const { data: sesiones, isLoading } = useGetSesiones();
   const { data: estudiantes } = useGetEstudiantes();
+  
+  // Data for the creation modal
+  const { data: niveles } = useGetNiveles();
+  const { data: profesores } = useGetProfesores();
+  const { data: salones } = useGetSalones();
+
   const inscribir = useInscribirEstudiante();
   const updateAsistencia = useUpdateAsistencia();
+  const createSesion = useCreateSesion();
 
   const [selectedSesion, setSelectedSesion] = useState<number | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const handleEnroll = (sesionId: number, estudianteId: number) => {
     inscribir.mutate({ sesion_id: sesionId, estudiante_id: estudianteId });
@@ -27,19 +37,44 @@ export const Sesiones: React.FC = () => {
     updateAsistencia.mutate({ id: inscripcionId, estado });
   };
 
+  const handleCreateSesion = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    createSesion.mutate({
+      nivel_id: parseInt(formData.get('nivel_id') as string),
+      profesor_id: parseInt(formData.get('profesor_id') as string),
+      salon_id: parseInt(formData.get('salon_id') as string),
+      fecha: new Date(formData.get('fecha') as string).toISOString(),
+      hora_inicio: `1970-01-01T${formData.get('hora_inicio')}:00Z`, // Minimal valid ISO time string for backend
+      duracion_min: parseInt(formData.get('duracion_min') as string),
+      cupos_disponibles: parseInt(formData.get('cupos_disponibles') as string),
+    }, { onSuccess: () => setShowModal(false) });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-brand-slate">Calendario de Sesiones</h1>
           <p className="text-slate-500 text-sm">Gestiona las clases, profesores y asistencia.</p>
         </div>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" /> Nueva Sesión
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
           {isLoading ? (
             [1, 2, 3].map(i => <div key={i} className="h-40 bg-white rounded-2xl border border-brand-border animate-pulse" />)
+          ) : sesiones?.length === 0 ? (
+            <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-brand-border">
+              <Calendar className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <p className="text-slate-400 font-medium">No hay sesiones programadas.</p>
+            </div>
           ) : (
             sesiones?.map(sesion => (
               <div 
@@ -59,7 +94,7 @@ export const Sesiones: React.FC = () => {
                       <Calendar className="w-4 h-4" /> {new Date(sesion.fecha).toLocaleDateString()}
                     </div>
                     <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <Clock className="w-4 h-4" /> {sesion.hora_inicio} ({sesion.duracion_min} min)
+                      <Clock className="w-4 h-4" /> {new Date(sesion.hora_inicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({sesion.duracion_min} min)
                     </div>
                   </div>
                 </div>
@@ -174,6 +209,65 @@ export const Sesiones: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-brand-slate/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl border border-brand-border w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-brand-border flex justify-between items-center">
+              <h3 className="text-xl font-bold text-brand-slate">Programar Sesión</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-brand-slate">&times;</button>
+            </div>
+            <form onSubmit={handleCreateSesion} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nivel</label>
+                <select required name="nivel_id" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                  <option value="">Seleccionar nivel...</option>
+                  {niveles?.map(n => <option key={n.nivel_id} value={n.nivel_id}>{n.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profesor</label>
+                <select required name="profesor_id" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                  <option value="">Seleccionar profesor...</option>
+                  {profesores?.map(p => <option key={p.profesor_id} value={p.profesor_id}>{p.nombre} ({p.especialidad})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Salón</label>
+                <select required name="salon_id" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                  <option value="">Seleccionar salón...</option>
+                  {salones?.map(s => <option key={s.salon_id} value={s.salon_id}>{s.nombre} (Cap: {s.capacidad})</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                  <input required name="fecha" type="date" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora Inicio</label>
+                  <input required name="hora_inicio" type="time" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duración (Min)</label>
+                  <input required name="duracion_min" type="number" min="30" step="15" defaultValue="60" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cupos</label>
+                  <input required name="cupos_disponibles" type="number" min="1" defaultValue="10" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                </div>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-brand-border font-semibold text-slate-500 hover:bg-brand-secondary transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 bg-primary text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

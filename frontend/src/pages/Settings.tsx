@@ -1,18 +1,32 @@
 import React, { useState } from 'react';
-import { useGetNiveles, useGetProfesores, useGetSalones } from '../hooks/useSettings';
+import { 
+  useGetNiveles, useCreateNivel, useDeleteNivel,
+  useGetProfesores, useCreateProfesor, useDeleteProfesor,
+  useGetSalones, useCreateSalon, useDeleteSalon
+} from '../hooks/useSettings';
 import { 
   BookOpen, 
   User, 
   MapPin,
-  ChevronRight
+  Trash2,
+  Plus
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'NIVELES' | 'PROFESORES' | 'SALONES'>('NIVELES');
+  const [showModal, setShowModal] = useState(false);
   
   const { data: niveles, isLoading: loadingNiv } = useGetNiveles();
+  const createNivel = useCreateNivel();
+  const deleteNivel = useDeleteNivel();
+
   const { data: profesores, isLoading: loadingProf } = useGetProfesores();
+  const createProfesor = useCreateProfesor();
+  const deleteProfesor = useDeleteProfesor();
+
   const { data: salones, isLoading: loadingSal } = useGetSalones();
+  const createSalon = useCreateSalon();
+  const deleteSalon = useDeleteSalon();
 
   const tabs = [
     { id: 'NIVELES', label: 'Niveles', icon: BookOpen },
@@ -20,11 +34,47 @@ export const Settings: React.FC = () => {
     { id: 'SALONES', label: 'Salones', icon: MapPin },
   ] as const;
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    if (activeTab === 'NIVELES') {
+      createNivel.mutate({
+        nombre: formData.get('nombre') as string,
+        descripcion: formData.get('descripcion') as string,
+        duracion_semanas: parseInt(formData.get('duracion_semanas') as string),
+        precio: formData.get('precio') as string,
+      }, { onSuccess: () => setShowModal(false) });
+    } else if (activeTab === 'PROFESORES') {
+      createProfesor.mutate({
+        nombre: formData.get('nombre') as string,
+        email: formData.get('email') as string,
+        telefono: formData.get('telefono') as string,
+        especialidad: formData.get('especialidad') as string,
+      }, { onSuccess: () => setShowModal(false) });
+    } else if (activeTab === 'SALONES') {
+      createSalon.mutate({
+        nombre: formData.get('nombre') as string,
+        capacidad: parseInt(formData.get('capacidad') as string),
+        equipado: formData.get('equipado') === 'on',
+      }, { onSuccess: () => setShowModal(false) });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-brand-slate">Configuración del Sistema</h1>
-        <p className="text-slate-500 text-sm">Administra los catálogos maestros de la academia.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-slate">Configuración del Sistema</h1>
+          <p className="text-slate-500 text-sm">Administra los catálogos maestros de la academia.</p>
+        </div>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" /> 
+          Agregar {activeTab === 'NIVELES' ? 'Nivel' : activeTab === 'PROFESORES' ? 'Profesor' : 'Salón'}
+        </button>
       </div>
 
       <div className="flex border-b border-brand-border gap-8">
@@ -56,7 +106,9 @@ export const Settings: React.FC = () => {
                     <p className="text-xs text-slate-500">{n.duracion_semanas} semanas · ${parseFloat(n.precio).toFixed(2)}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
+                <button onClick={() => deleteNivel.mutate(n.nivel_id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
@@ -75,7 +127,9 @@ export const Settings: React.FC = () => {
                     <p className="text-xs text-slate-500">{p.especialidad || 'General English'} · {p.email}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
+                <button onClick={() => deleteProfesor.mutate(p.profesor_id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
@@ -94,12 +148,101 @@ export const Settings: React.FC = () => {
                     <p className="text-xs text-slate-500">Capacidad: {s.capacidad} · {s.equipado ? 'Equipado' : 'Básico'}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
+                <button onClick={() => deleteSalon.mutate(s.salon_id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-brand-slate/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl border border-brand-border w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-brand-border flex justify-between items-center">
+              <h3 className="text-xl font-bold text-brand-slate">
+                Nuevo {activeTab === 'NIVELES' ? 'Nivel' : activeTab === 'PROFESORES' ? 'Profesor' : 'Salón'}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-brand-slate">&times;</button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              
+              {activeTab === 'NIVELES' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre (ej. B2)</label>
+                    <input required name="nombre" type="text" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duración (Semanas)</label>
+                    <input required name="duracion_semanas" type="number" min="1" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Precio (USD)</label>
+                    <input required name="precio" type="number" step="0.01" min="0" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
+                    <textarea name="descripcion" rows={2} className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all"></textarea>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'PROFESORES' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Completo</label>
+                    <input required name="nombre" type="text" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                    <input required name="email" type="email" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Especialidad (MCER)</label>
+                    <select required name="especialidad" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                      <option value="A1">A1</option>
+                      <option value="A2">A2</option>
+                      <option value="B1">B1</option>
+                      <option value="B2">B2</option>
+                      <option value="C1">C1</option>
+                      <option value="C2">C2</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
+                    <input name="telefono" type="tel" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'SALONES' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre del Salón</label>
+                    <input required name="nombre" type="text" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Capacidad</label>
+                    <input required name="capacidad" type="number" min="1" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div className="flex items-center gap-2 mt-4">
+                    <input name="equipado" type="checkbox" id="equipado" className="w-4 h-4 text-primary rounded border-brand-border focus:ring-primary" defaultChecked />
+                    <label htmlFor="equipado" className="text-sm font-medium text-brand-slate">Equipado con A/V</label>
+                  </div>
+                </>
+              )}
+
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-brand-border font-semibold text-slate-500 hover:bg-brand-secondary transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 bg-primary text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

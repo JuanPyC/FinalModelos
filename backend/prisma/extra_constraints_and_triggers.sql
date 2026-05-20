@@ -46,13 +46,13 @@ RETURNS trigger AS $$
 DECLARE
   v_exists INTEGER;
 BEGIN
-  -- Only act on UPDATE where estado_asistencia becomes 'Faltó'
+  -- Only act on UPDATE where estado_asistencia becomes 'FALTO'
   IF TG_OP = 'UPDATE' THEN
-    IF NEW.estado_asistencia = 'Faltó' AND (OLD.estado_asistencia IS DISTINCT FROM 'Faltó') THEN
+    IF NEW.estado_asistencia = 'FALTO' AND (OLD.estado_asistencia IS DISTINCT FROM 'FALTO') THEN
       -- Ensure not to duplicate multas for same inscripcion
       SELECT 1 INTO v_exists FROM "MULTAS" WHERE inscripcion_id = NEW.inscripcion_id LIMIT 1;
       IF NOT FOUND THEN
-        INSERT INTO "MULTAS" (inscripcion_id, estudiante_id, monto, estado_pago) VALUES (NEW.inscripcion_id, NEW.estudiante_id, 10.00, 'Pendiente');
+        INSERT INTO "MULTAS" (inscripcion_id, estudiante_id, monto, estado_pago) VALUES (NEW.inscripcion_id, NEW.estudiante_id, 10.00, 'PENDIENTE');
         UPDATE "ESTUDIANTES" SET saldo_pendiente = saldo_pendiente + 10.00 WHERE estudiante_id = NEW.estudiante_id;
       END IF;
     END IF;

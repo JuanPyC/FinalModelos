@@ -8,8 +8,7 @@ import {
   Users,
   Clock,
   CheckCircle2,
-  XCircle,
-  PlusCircle
+  XCircle
 } from 'lucide-react';
 
 export const Sesiones: React.FC = () => {

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../api/client';
-import { ApiResponse, Sesion, Inscripcion } from '../types';
+import type { ApiResponse, Sesion, Inscripcion } from '../types';
 
 export const useGetSesiones = () => {
   return useQuery({

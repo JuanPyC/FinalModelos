@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useGetEstudiantes, useCreateEstudiante } from '../hooks/useEstudiantes';
 import { 
   Search, 
-  Plus, 
   MoreHorizontal, 
   Mail, 
   Phone,

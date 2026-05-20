@@ -3,8 +3,6 @@ import { useGetMultas, usePayMulta } from '../hooks/useMultas';
 import { 
   CreditCard, 
   CheckCircle, 
-  Clock, 
-  Filter,
   DollarSign
 } from 'lucide-react';
 

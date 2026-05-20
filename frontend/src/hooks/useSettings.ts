@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../api/client';
-import { ApiResponse, Nivel, Profesor, Salon } from '../types';
+import type { ApiResponse, Nivel, Profesor, Salon } from '../types';
 
 export const useGetNiveles = () => {
   return useQuery({

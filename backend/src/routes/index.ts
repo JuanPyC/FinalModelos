@@ -11,16 +11,16 @@ router.get('/health', (req, res) => {
 import nivelesRouter from './niveles';
 // import profesoresRouter from './profesores';
 import salonesRouter from './salones';
-// import estudiantesRouter from './estudiantes';
-// import sesionesRouter from './sesiones';
+import sesionesRouter from './sesiones';
+import estudiantesRouter from './estudiantes';
 // import inscripcionesRouter from './inscripciones';
 // import multasRouter from './multas';
 
 router.use('/niveles', nivelesRouter);
 // router.use('/profesores', profesoresRouter);
 router.use('/salones', salonesRouter);
-// router.use('/estudiantes', estudiantesRouter);
-// router.use('/sesiones', sesionesRouter);
+router.use('/sesiones', sesionesRouter);
+router.use('/estudiantes', estudiantesRouter);
 // router.use('/inscripciones', inscripcionesRouter);
 // router.use('/multas', multasRouter);
 

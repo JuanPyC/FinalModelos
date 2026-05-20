@@ -55,7 +55,7 @@ export const useUpdateAsistencia = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, estado }: { id: number; estado: string }) => {
-      const { data } = await apiClient.patch<ApiResponse<Inscripcion>>(`/inscripciones/${id}/asistencia`, {
+      const { data } = await apiClient.patch<ApiResponse<Inscripcion>>(`/inscripciones/${id}`, {
         estado_asistencia: estado,
       });
       return data.data;

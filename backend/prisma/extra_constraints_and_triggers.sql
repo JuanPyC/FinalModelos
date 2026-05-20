@@ -1,20 +1,43 @@
-BEGIN;
+-- 1) Add CHECK constraints (use IF NOT EXISTS pattern via DO blocks)
+DO $$ BEGIN
+  ALTER TABLE "NIVELES" ADD CONSTRAINT niveles_duracion_positive CHECK (duracion_semanas > 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- 1) Add CHECK constraints
-ALTER TABLE "NIVELES" ADD CONSTRAINT niveles_duracion_positive CHECK (duracion_semanas > 0);
-ALTER TABLE "NIVELES" ADD CONSTRAINT niveles_precio_nonnegative CHECK (precio >= 0);
+DO $$ BEGIN
+  ALTER TABLE "NIVELES" ADD CONSTRAINT niveles_precio_nonnegative CHECK (precio >= 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "SALONES" ADD CONSTRAINT salones_capacidad_positive CHECK (capacidad > 0);
+DO $$ BEGIN
+  ALTER TABLE "SALONES" ADD CONSTRAINT salones_capacidad_positive CHECK (capacidad > 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "SESIONES" ADD CONSTRAINT sesiones_duracion_positive CHECK (duracion_min > 0);
-ALTER TABLE "SESIONES" ADD CONSTRAINT sesiones_cupos_nonnegative CHECK (cupos_disponibles >= 0);
+DO $$ BEGIN
+  ALTER TABLE "SESIONES" ADD CONSTRAINT sesiones_duracion_positive CHECK (duracion_min > 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "ESTUDIANTES" ADD CONSTRAINT estudiantes_saldo_nonnegative CHECK (saldo_pendiente >= 0);
+DO $$ BEGIN
+  ALTER TABLE "SESIONES" ADD CONSTRAINT sesiones_cupos_nonnegative CHECK (cupos_disponibles >= 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "MULTAS" ADD CONSTRAINT multas_monto_positive CHECK (monto > 0);
+DO $$ BEGIN
+  ALTER TABLE "ESTUDIANTES" ADD CONSTRAINT estudiantes_saldo_nonnegative CHECK (saldo_pendiente >= 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- Profesor especialidad must be one of MCER values
-ALTER TABLE "PROFESORES" ADD CONSTRAINT profesores_especialidad_mcer CHECK (especialidad IN ('A1','A2','B1','B2','C1','C2'));
+DO $$ BEGIN
+  ALTER TABLE "MULTAS" ADD CONSTRAINT multas_monto_positive CHECK (monto > 0);
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "PROFESORES" ADD CONSTRAINT profesores_especialidad_mcer CHECK (especialidad IN ('A1','A2','B1','B2','C1','C2'));
+  EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 2) Create stored procedure to inscribe a student (atomically)
 CREATE OR REPLACE FUNCTION inscribir_estudiante(p_estudiante_id INTEGER, p_sesion_id INTEGER)
@@ -67,5 +90,3 @@ CREATE TRIGGER trg_multa_por_inasistencia
 AFTER UPDATE OF estado_asistencia ON "INSCRIPCIONES"
 FOR EACH ROW
 EXECUTE FUNCTION trg_multa_por_inasistencia_fn();
-
-COMMIT;

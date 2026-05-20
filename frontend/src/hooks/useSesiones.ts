@@ -55,14 +55,29 @@ export const useUpdateAsistencia = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, estado }: { id: number; estado: string }) => {
-      const { data } = await apiClient.patch<ApiResponse<Inscripcion>>(`/inscripciones/${id}`, {
+      const response = await apiClient.patch<ApiResponse<Inscripcion>>(`/inscripciones/${id}`, {
         estado_asistencia: estado,
       });
-      return data.data;
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (response, { estado }) => {
+      if (!response.success) {
+        throw new Error(response.error || 'Error al actualizar asistencia');
+      }
       queryClient.invalidateQueries({ queryKey: ['sesiones'] });
       queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
+      queryClient.invalidateQueries({ queryKey: ['multas'] });
+      const mensaje = estado === 'FALTO'
+        ? 'Inasistencia registrada. Se generó multa automática.'
+        : estado === 'ASISTIO'
+          ? 'Asistencia registrada correctamente.'
+          : `Estado actualizado a ${estado}.`;
+      alert(mensaje);
+    },
+    onError: (error: any) => {
+      const backendError = error?.response?.data?.error;
+      const message = backendError || error?.message || 'Error al actualizar asistencia';
+      alert(`Error: ${message}`);
     },
   });
 };

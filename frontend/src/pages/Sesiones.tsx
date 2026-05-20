@@ -53,6 +53,8 @@ export const Sesiones: React.FC = () => {
     }
   };
 
+  const [selectedEstudiante, setSelectedEstudiante] = useState<string>('');
+
   const openModal = (sesion: Sesion | null = null) => {
     setEditingSesion(sesion);
     setShowModal(true);
@@ -216,19 +218,22 @@ export const Sesiones: React.FC = () => {
                         </p>
                       </div>
                       <div className="flex gap-1 items-center">
-                        <button 
+                        <button
+                          type="button"
                           onClick={() => handleAsistencia(ins.inscripcion_id, 'ASISTIO')}
                           className={`p-1.5 rounded-lg transition-colors ${ins.estado_asistencia === 'ASISTIO' ? 'bg-emerald-500 text-white' : 'hover:bg-emerald-100 text-emerald-500'}`}
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
+                          type="button"
                           onClick={() => handleAsistencia(ins.inscripcion_id, 'FALTO')}
                           className={`p-1.5 rounded-lg transition-colors ${ins.estado_asistencia === 'FALTO' ? 'bg-rose-500 text-white' : 'hover:bg-rose-100 text-rose-500'}`}
                         >
                           <XCircle className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
+                          type="button"
                           onClick={() => handleRemoveInscripcion(ins.inscripcion_id)}
                           className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100"
                           title="Eliminar Inscripción"
@@ -245,17 +250,19 @@ export const Sesiones: React.FC = () => {
 
                 <div className="pt-4 border-t border-brand-border">
                   <p className="text-xs font-bold text-slate-500 uppercase mb-3">Inscribir Estudiante</p>
-                  <select 
+                  <select
                     className="w-full px-4 py-2 rounded-xl border border-brand-border text-sm focus:ring-2 focus:ring-primary/20 outline-none mb-3"
-                    value=""
+                    value={selectedEstudiante}
                     onChange={(e) => {
-                      if (e.target.value && selectedSesion) {
-                        handleEnroll(selectedSesion, parseInt(e.target.value));
+                      const val = e.target.value;
+                      if (val && selectedSesion) {
+                        handleEnroll(selectedSesion, parseInt(val));
+                        setSelectedEstudiante('');
                       }
                     }}
                   >
                     <option value="">Seleccionar estudiante...</option>
-                    {estudiantes?.filter(est => 
+                    {estudiantes?.filter(est =>
                       !sesiones?.find(s => s.sesion_id === selectedSesion)?.inscripciones?.some(ins => ins.estudiante_id === est.estudiante_id)
                     ).map(est => (
                       <option key={est.estudiante_id} value={est.estudiante_id}>{est.nombre}</option>

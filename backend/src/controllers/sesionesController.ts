@@ -10,7 +10,12 @@ const getErrorMessage = (error: unknown): string => {
 export const getSesiones = async (req: Request, res: Response) => {
   try {
     const sesiones = await prisma.sesion.findMany({
-      include: { nivel: true, profesor: true, salon: true, inscripciones: true },
+      include: {
+        nivel: true,
+        profesor: true,
+        salon: true,
+        inscripciones: { include: { estudiante: true } },
+      },
       orderBy: { fecha: 'asc' },
     });
     res.json({ success: true, data: sesiones } as ApiResponse<any>);

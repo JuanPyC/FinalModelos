@@ -19,6 +19,9 @@ RUN npm run build
 # Stage 2: Production
 FROM node:20-alpine
 
+# Install PostgreSQL client for running SQL scripts
+RUN apk add --no-cache postgresql-client
+
 WORKDIR /app
 
 # Copy package files
@@ -27,13 +30,18 @@ COPY package*.json ./
 # Install production dependencies
 RUN npm install --omit=dev
 
-# Copy built app and configuration
+# Copy built app
 COPY --from=builder /app/dist ./dist
+
+# Copy Prisma files and SQL scripts
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-# Prisma 7 client files are in node_modules, we must ensure they are here
-# Since we ran npm install --omit=dev in Stage 2, we should have @prisma/client.
-# But we also need the generated files from the builder if they were generated into node_modules.
+
+# Copy startup script
+COPY startup.sh ./startup.sh
+RUN chmod +x startup.sh
+
+# Copy Prisma client generated files
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
@@ -44,5 +52,5 @@ ENV PORT=3000
 # Expose port
 EXPOSE 3000
 
-# Startup command: migrate, seed, and start
-CMD npx prisma migrate deploy && node prisma/seed.js && node dist/server.js
+# Startup script handles migrations, triggers, seeding, and server
+CMD ["./startup.sh"]

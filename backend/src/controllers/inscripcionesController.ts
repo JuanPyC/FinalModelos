@@ -18,28 +18,20 @@ const VALID_ESTADOS = ['PROGRAMADA', 'ASISTIO', 'FALTO', 'CANCELADA'] as const;
 type EstadoAsistenciaValido = typeof VALID_ESTADOS[number];
 
 const toEstadoAsistenciaEnum = (estado: string): EstadoAsistenciaValido | null => {
-  const estadoMap: Record<string, EstadoAsistenciaValido> = {
-    Programada: 'PROGRAMADA',
-    'Asistió': 'ASISTIO',
-    'Faltó': 'FALTO',
-    Cancelada: 'CANCELADA',
-    programada: 'PROGRAMADA',
-    asistio: 'ASISTIO',
-    asistió: 'ASISTIO',
-    falto: 'FALTO',
-    faltó: 'FALTO',
-    cancelada: 'CANCELADA',
+  const normalized = estado
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const lookup: Record<string, EstadoAsistenciaValido> = {
+    PROGRAMADA: 'PROGRAMADA',
+    ASISTIO: 'ASISTIO',
+    FALTO: 'FALTO',
+    CANCELADA: 'CANCELADA',
   };
 
-  const mapped = estadoMap[estado];
-  if (mapped) return mapped;
-
-  const upper = estado.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (VALID_ESTADOS.includes(upper as EstadoAsistenciaValido)) {
-    return upper as EstadoAsistenciaValido;
-  }
-
-  return null;
+  return lookup[normalized] || null;
 };
 
 export const getInscripciones = async (req: Request, res: Response) => {
@@ -126,6 +118,9 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
   try {
     const { id } = req.params;
     const { estado_asistencia }: UpdateInscripcionDTO = req.body;
+    const inscripcionId = parseInt(id);
+
+    console.log(`[ASISTENCIA] PATCH /inscripciones/${id} | body:`, JSON.stringify(req.body));
 
     if (!estado_asistencia) {
       return res.status(400).json({ success: false, error: 'Requerido: estado_asistencia' });
@@ -141,30 +136,41 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
     }
 
     const inscripcion = await prisma.inscripcion.findUnique({
-      where: { inscripcion_id: parseInt(id) },
+      where: { inscripcion_id: inscripcionId },
     });
 
     if (!inscripcion) {
       return res.status(404).json({ success: false, error: 'Inscripción no encontrada' });
     }
 
+    console.log(`[ASISTENCIA] Inscripcion ${inscripcionId}: estado actual=${inscripcion.estado_asistencia}, nuevo=${estadoEnum}`);
+
     // If changing from FALTO to another state, reverse the multa and adjust balance
     if (inscripcion.estado_asistencia === 'FALTO' && estadoEnum !== 'FALTO') {
       const multa = await prisma.multa.findFirst({
-        where: { inscripcion_id: inscripcion.inscripcion_id, estado_pago: 'PENDIENTE' },
+        where: { inscripcion_id: inscripcionId, estado_pago: 'PENDIENTE' },
       });
 
       if (multa) {
+        const currentEstudiante = await prisma.estudiante.findUnique({
+          where: { estudiante_id: inscripcion.estudiante_id },
+          select: { saldo_pendiente: true },
+        });
+        const nuevoSaldo = Number(currentEstudiante?.saldo_pendiente || 0) - Number(multa.monto);
+        if (nuevoSaldo < 0) {
+          console.warn(`[ASISTENCIA] Saldo sería negativo (${nuevoSaldo}), ajustando a 0`);
+        }
         await prisma.estudiante.update({
           where: { estudiante_id: inscripcion.estudiante_id },
           data: { saldo_pendiente: { decrement: multa.monto } },
         });
         await prisma.multa.delete({ where: { multa_id: multa.multa_id } });
+        console.log(`[ASISTENCIA] Multa ${multa.multa_id} revertida`);
       }
     }
 
     const updated = await prisma.inscripcion.update({
-      where: { inscripcion_id: parseInt(id) },
+      where: { inscripcion_id: inscripcionId },
       data: { estado_asistencia: estadoEnum },
       include: {
         estudiante: true,
@@ -173,13 +179,49 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
       },
     });
 
+    // If marking FALTO, ensure multa exists (application-level fallback if trigger doesn't fire)
+    if (estadoEnum === 'FALTO') {
+      const existingMulta = await prisma.multa.findFirst({
+        where: { inscripcion_id: inscripcionId },
+      });
+
+      if (!existingMulta) {
+        console.log(`[ASISTENCIA] Trigger no generó multa, creando manualmente`);
+        await prisma.multa.create({
+          data: {
+            inscripcion_id: inscripcionId,
+            estudiante_id: inscripcion.estudiante_id,
+            monto: 10,
+            estado_pago: 'PENDIENTE',
+          },
+        });
+        await prisma.estudiante.update({
+          where: { estudiante_id: inscripcion.estudiante_id },
+          data: { saldo_pendiente: { increment: 10 } },
+        });
+      }
+    }
+
+    // Refetch to include any application-level multa changes
+    const final = await prisma.inscripcion.findUnique({
+      where: { inscripcion_id: inscripcionId },
+      include: {
+        estudiante: true,
+        sesion: { include: { nivel: true, profesor: true, salon: true } },
+        multas: true,
+      },
+    });
+
+    console.log(`[ASISTENCIA] OK: ${inscripcionId} -> ${estadoEnum}`);
     res.json({
       success: true,
-      data: updated,
+      data: final,
       message: 'Asistencia actualizada. Si es Faltó, la multa se genera automáticamente.',
     } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: getErrorMessage(error) });
+    console.error(`[ASISTENCIA] ERROR en inscripcion ${req.params.id}:`, error);
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    res.status(500).json({ success: false, error: msg });
   }
 };
 

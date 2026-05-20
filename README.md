@@ -191,6 +191,68 @@ Las tablas y sus relaciones se describen a continuación (→ indica FK):
 
 ---
 
+## 🚀 Guía de Ejecución
+
+Este proyecto está completamente dockerizado para facilitar su despliegue y desarrollo.
+
+### 6.1 Requisitos Previos
+- Docker y Docker Compose instalados.
+- Node.js v22+ (opcional, para desarrollo local sin Docker).
+
+### 6.2 Ejecución con Docker (Recomendado)
+
+Para levantar toda la infraestructura (Base de Datos, API, Frontend y Prisma Studio):
+
+```bash
+# Construir y levantar los contenedores
+docker compose up --build -d
+
+# Detener los servicios
+docker compose down
+```
+
+**Servicios Disponibles:**
+- **Frontend (UI):** [http://localhost](http://localhost)
+- **Backend (API):** [http://localhost:3000/api](http://localhost:3000/api)
+- **Prisma Studio (Explorador DB):** [http://localhost:5555](http://localhost:5555)
+
+### 6.3 Configuración de Base de Datos (Primera vez)
+
+Si los contenedores están corriendo, puedes inicializar la base de datos y cargar los datos de prueba (seed):
+
+```bash
+# Ejecutar migraciones
+docker exec -it speakup_api npx prisma migrate dev --name init
+
+# Cargar triggers y procedimientos SQL (opcional si ya están en migrations)
+docker exec -it speakup_api npx prisma db execute --file ./prisma/extra_constraints_and_triggers.sql
+
+# Cargar datos de prueba
+docker exec -it speakup_api node prisma/seed.js
+```
+
+### 6.4 Desarrollo Local (Sin Docker)
+
+Si prefieres ejecutar los servicios de forma independiente:
+
+**Backend:**
+```bash
+cd backend
+npm install
+# Configura el .env con tu DATABASE_URL
+npx prisma migrate dev
+npm run dev
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
 ## 📄 Archivos del Proyecto
 
 El script SQL completo **(DDL + DML + consultas + trigger + SP)** se entrega como archivo separado:

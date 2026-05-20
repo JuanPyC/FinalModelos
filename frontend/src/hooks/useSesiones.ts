@@ -29,7 +29,7 @@ export const useUpdateSesion = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Sesion> }) => {
-      const response = await apiClient.put<ApiResponse<Sesion>>(`/sesiones/${id}`, data);
+      const response = await apiClient.patch<ApiResponse<Sesion>>(`/sesiones/${id}`, data);
       return response.data.data;
     },
     onSuccess: () => {

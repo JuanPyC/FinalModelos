@@ -40,7 +40,7 @@ export const useUpdateEstudiante = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Estudiante> }) => {
-      const response = await apiClient.put<ApiResponse<Estudiante>>(`/estudiantes/${id}`, data);
+      const response = await apiClient.patch<ApiResponse<Estudiante>>(`/estudiantes/${id}`, data);
       return response.data.data;
     },
     onSuccess: () => {

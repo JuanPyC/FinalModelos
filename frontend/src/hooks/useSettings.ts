@@ -27,7 +27,7 @@ export const useUpdateNivel = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Nivel> }) => {
-      const response = await apiClient.put<ApiResponse<Nivel>>(`/niveles/${id}`, data);
+      const response = await apiClient.patch<ApiResponse<Nivel>>(`/niveles/${id}`, data);
       return response.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['niveles'] }),

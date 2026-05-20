@@ -39,5 +39,18 @@ services:
       retries: 5
       start_period: 30s
 
+  studio:
+    image: speakup_backend:latest
+    container_name: speakup_studio
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://academy:academy_pass@db:5432/english_academy_db?schema=public"
+    ports:
+      - "5555:5555"
+    command: npx prisma studio --browser none --port 5555
+
 volumes:
   speakup_db_data:

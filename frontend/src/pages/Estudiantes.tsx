@@ -1,36 +1,65 @@
 import React, { useState } from 'react';
-import { useGetEstudiantes, useCreateEstudiante } from '../hooks/useEstudiantes';
+import { useGetEstudiantes, useCreateEstudiante, useUpdateEstudiante, useDeleteEstudiante } from '../hooks/useEstudiantes';
 import { 
   Search, 
-  MoreHorizontal, 
   Mail, 
   Phone,
-  UserPlus
+  UserPlus,
+  Trash2,
+  Edit2
 } from 'lucide-react';
+import type { Estudiante } from '../types';
 
 export const Estudiantes: React.FC = () => {
   const { data: estudiantes, isLoading } = useGetEstudiantes();
   const createEstudiante = useCreateEstudiante();
+  const updateEstudiante = useUpdateEstudiante();
+  const deleteEstudiante = useDeleteEstudiante();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingEstudiante, setEditingEstudiante] = useState<Estudiante | null>(null);
 
   const filteredEstudiantes = estudiantes?.filter(est => 
     est.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     est.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const openModal = (est: Estudiante | null = null) => {
+    setEditingEstudiante(est);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setEditingEstudiante(null);
+    setShowModal(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const nuevo = {
+    const data = {
       nombre: formData.get('nombre') as string,
       email: formData.get('email') as string,
       telefono: formData.get('telefono') as string,
-      fecha_nacimiento: formData.get('fecha_nacimiento') as string,
+      fecha_nacimiento: new Date(formData.get('fecha_nacimiento') as string).toISOString(),
     };
-    createEstudiante.mutate(nuevo, {
-      onSuccess: () => setShowModal(false),
-    });
+
+    if (editingEstudiante) {
+      updateEstudiante.mutate({ id: editingEstudiante.estudiante_id, data }, {
+        onSuccess: closeModal,
+      });
+    } else {
+      createEstudiante.mutate(data, {
+        onSuccess: closeModal,
+      });
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('¿Estás seguro de eliminar este estudiante? Esta acción es irreversible.')) {
+      deleteEstudiante.mutate(id);
+    }
   };
 
   return (
@@ -41,7 +70,7 @@ export const Estudiantes: React.FC = () => {
           <p className="text-slate-500 text-sm">Administra y registra a los alumnos de la academia.</p>
         </div>
         <button 
-          onClick={() => setShowModal(true)}
+          onClick={() => openModal()}
           className="bg-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
         >
           <UserPlus className="w-4 h-4" /> Nuevo Estudiante
@@ -54,7 +83,7 @@ export const Estudiantes: React.FC = () => {
           <input 
             type="text" 
             placeholder="Buscar por nombre o email..." 
-            className="bg-transparent border-none focus:ring-0 text-sm w-full"
+            className="bg-transparent border-none focus:ring-0 text-sm w-full outline-none"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -89,7 +118,7 @@ export const Estudiantes: React.FC = () => {
                   <tr key={est.estudiante_id} className="hover:bg-brand-secondary/20 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 uppercase">
                           {est.nombre.charAt(0)}
                         </div>
                         <span className="font-semibold text-brand-slate">{est.nombre}</span>
@@ -116,9 +145,14 @@ export const Estudiantes: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="p-2 hover:bg-brand-secondary rounded-lg transition-colors">
-                        <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => openModal(est)} className="p-2 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDelete(est.estudiante_id)} className="p-2 hover:bg-rose-50 text-rose-500 rounded-lg transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -132,29 +166,29 @@ export const Estudiantes: React.FC = () => {
         <div className="fixed inset-0 bg-brand-slate/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-xl border border-brand-border w-full max-w-md overflow-hidden">
             <div className="p-6 border-b border-brand-border flex justify-between items-center">
-              <h3 className="text-xl font-bold text-brand-slate">Nuevo Estudiante</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-brand-slate">&times;</button>
+              <h3 className="text-xl font-bold text-brand-slate">{editingEstudiante ? 'Editar Estudiante' : 'Nuevo Estudiante'}</h3>
+              <button onClick={closeModal} className="text-slate-400 hover:text-brand-slate">&times;</button>
             </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Completo</label>
-                <input required name="nombre" type="text" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                <input defaultValue={editingEstudiante?.nombre} required name="nombre" type="text" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
-                <input required name="email" type="email" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                <input defaultValue={editingEstudiante?.email} required name="email" type="email" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                <input name="telefono" type="tel" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                <input defaultValue={editingEstudiante?.telefono} name="telefono" type="tel" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Nacimiento</label>
-                <input required name="fecha_nacimiento" type="date" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                <input defaultValue={editingEstudiante ? new Date(editingEstudiante.fecha_nacimiento).toISOString().split('T')[0] : ''} required name="fecha_nacimiento" type="date" className="w-full px-4 py-2 rounded-xl border border-brand-border focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
               </div>
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 rounded-xl border border-brand-border font-semibold text-slate-500 hover:bg-brand-secondary transition-colors">Cancelar</button>
-                <button type="submit" className="flex-1 bg-primary text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm">Guardar</button>
+                <button type="button" onClick={closeModal} className="flex-1 px-4 py-2 rounded-xl border border-brand-border font-semibold text-slate-500 hover:bg-brand-secondary transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 bg-primary text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm">{editingEstudiante ? 'Actualizar' : 'Guardar'}</button>
               </div>
             </form>
           </div>
@@ -163,3 +197,4 @@ export const Estudiantes: React.FC = () => {
     </div>
   );
 };
+

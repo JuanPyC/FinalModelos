@@ -23,6 +23,17 @@ export const useCreateNivel = () => {
   });
 };
 
+export const useUpdateNivel = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Nivel> }) => {
+      const response = await apiClient.put<ApiResponse<Nivel>>(`/niveles/${id}`, data);
+      return response.data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['niveles'] }),
+  });
+};
+
 export const useDeleteNivel = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -55,6 +66,17 @@ export const useCreateProfesor = () => {
   });
 };
 
+export const useUpdateProfesor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Profesor> }) => {
+      const response = await apiClient.put<ApiResponse<Profesor>>(`/profesores/${id}`, data);
+      return response.data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profesores'] }),
+  });
+};
+
 export const useDeleteProfesor = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -82,6 +104,17 @@ export const useCreateSalon = () => {
     mutationFn: async (nuevoSalon: Partial<Salon>) => {
       const { data } = await apiClient.post<ApiResponse<Salon>>('/salones', nuevoSalon);
       return data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['salones'] }),
+  });
+};
+
+export const useUpdateSalon = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Salon> }) => {
+      const response = await apiClient.put<ApiResponse<Salon>>(`/salones/${id}`, data);
+      return response.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['salones'] }),
   });

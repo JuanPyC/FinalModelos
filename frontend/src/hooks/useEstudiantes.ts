@@ -35,3 +35,29 @@ export const useCreateEstudiante = () => {
     },
   });
 };
+
+export const useUpdateEstudiante = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Estudiante> }) => {
+      const response = await apiClient.put<ApiResponse<Estudiante>>(`/estudiantes/${id}`, data);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
+    },
+  });
+};
+
+export const useDeleteEstudiante = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await apiClient.delete<ApiResponse<null>>(`/estudiantes/${id}`);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
+    },
+  });
+};

@@ -1,10 +1,23 @@
 import { Router } from 'express';
+import prisma from '../utils/db';
 
 const router = Router();
 
 // Health check endpoint
-router.get('/health', (req, res) => {
-  res.json({ success: true, message: 'API is running' });
+router.get('/health', async (req, res) => {
+  try {
+    // Basic connectivity check with Prisma
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      success: true, 
+      message: 'API is running and database is connected' 
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      success: false, 
+      message: 'API is running but database is disconnected' 
+    });
+  }
 });
 
 // Entity routes

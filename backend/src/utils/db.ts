@@ -1,20 +1,22 @@
-import 'dotenv/config';
-import { PrismaClient } from '../../generated';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 
-let prisma: PrismaClient;
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL no está definida');
+  throw new Error('DATABASE_URL no está definida en el entorno');
 }
 
-const adapter = new PrismaPg({ connectionString });
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === 'production') {
   prisma = new PrismaClient({ adapter });

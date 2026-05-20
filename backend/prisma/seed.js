@@ -1,19 +1,41 @@
-require('dotenv/config');
-const prisma = require('../src/utils/db').default;
-const { EstadoAsistencia, EstadoPago } = require('../generated');
+const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error('DATABASE_URL is not defined');
+  process.exit(1);
+}
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // Niveles (6)
-  const niveles = ['A1','A2','B1','B2','C1','C2'];
-  for (const n of niveles) {
-    await prisma.nivel.upsert({
-      where: { nombre: n },
-      update: {},
-      create: { nombre: n, descripcion: `${n} level`, duracion_semanas: 12, precio: 100 }
+  console.log('Starting comprehensive seed...');
+
+  // Limpiar datos previos en orden inverso de dependencia
+  await prisma.multa.deleteMany({});
+  await prisma.inscripcion.deleteMany({});
+  await prisma.sesion.deleteMany({});
+  await prisma.estudiante.deleteMany({});
+  await prisma.salon.deleteMany({});
+  await prisma.profesor.deleteMany({});
+  await prisma.nivel.deleteMany({});
+
+  // Niveles
+  const nivelesNames = ['A1','A2','B1','B2','C1','C2'];
+  const niveles = [];
+  for (const n of nivelesNames) {
+    const nivel = await prisma.nivel.create({
+      data: { nombre: n, descripcion: `${n} level`, duracion_semanas: 12, precio: 100 }
     });
+    niveles.push(nivel);
   }
 
-  // Profesores (10)
+  // Profesores
   const profs = [];
   for (let i = 1; i <= 10; i++) {
     const p = await prisma.profesor.create({
@@ -21,13 +43,13 @@ async function main() {
         nombre: `Profesor ${i}`,
         email: `prof${i}@speakup.edu`,
         telefono: `555-010${i.toString().padStart(2, '0')}`,
-        especialidad: niveles[i % 6]
+        especialidad: nivelesNames[i % 6]
       }
     });
     profs.push(p);
   }
 
-  // Salones (10)
+  // Salones
   const salons = [];
   for (let i = 1; i <= 10; i++) {
     const s = await prisma.salon.create({
@@ -40,7 +62,7 @@ async function main() {
     salons.push(s);
   }
 
-  // Estudiantes (12)
+  // Estudiantes
   const students = [];
   for (let i = 1; i <= 12; i++) {
     const st = await prisma.estudiante.create({
@@ -54,19 +76,16 @@ async function main() {
     students.push(st);
   }
 
-  // Sesiones (12) - distribute across niveles/profesores/salones
+  // Sesiones
   const sessions = [];
-  for (let i = 1; i <= 12; i++) {
-    const nivel = await prisma.nivel.findUnique({ where: { nombre: niveles[i % 6] } });
-    const prof = profs[i % profs.length];
-    const salon = salons[i % salons.length];
+  for (let i = 0; i < 10; i++) {
     const ses = await prisma.sesion.create({
       data: {
-        nivel_id: nivel.nivel_id,
-        profesor_id: prof.profesor_id,
-        salon_id: salon.salon_id,
-        fecha: new Date(2026, 4, i + 1),
-        hora_inicio: '09:00:00',
+        nivel_id: niveles[i % 6].nivel_id,
+        profesor_id: profs[i % 10].profesor_id,
+        salon_id: salons[i % 10].salon_id,
+        fecha: new Date(2026, 5, 20 + i),
+        hora_inicio: new Date(2026, 5, 20 + i, 9, 0, 0),
         duracion_min: 60,
         cupos_disponibles: 10
       }
@@ -74,42 +93,42 @@ async function main() {
     sessions.push(ses);
   }
 
-  // Inscripciones (at least 10)
-  const inscripciones = [];
-  for (let i = 0; i < 10; i++) {
-    const estudiante = students[i % students.length];
-    const sesion = sessions[i % sessions.length];
-    const estado = i % 4 === 0 ? EstadoAsistencia.FALTO : (i % 4 === 1 ? EstadoAsistencia.ASISTIO : EstadoAsistencia.PROGRAMADA);
+  // Inscripciones
+  for (let i = 0; i < 5; i++) {
     const ins = await prisma.inscripcion.create({
       data: {
-        estudiante_id: estudiante.estudiante_id,
-        sesion_id: sesion.sesion_id,
-        estado_asistencia: estado
+        estudiante_id: students[i].estudiante_id,
+        sesion_id: sessions[i].sesion_id,
+        estado_asistencia: i === 0 ? 'FALTO' : 'PROGRAMADA'
       }
     });
-    inscripciones.push(ins);
+
+    // Si faltó, crear una multa manualmente (aunque haya un trigger, esto asegura que el endpoint de multas tenga algo)
+    if (i === 0) {
+      await prisma.multa.create({
+        data: {
+          inscripcion_id: ins.inscripcion_id,
+          estudiante_id: ins.estudiante_id,
+          monto: 10,
+          estado_pago: 'PENDIENTE'
+        }
+      });
+      await prisma.estudiante.update({
+        where: { estudiante_id: ins.estudiante_id },
+        data: { saldo_pendiente: { increment: 10 } }
+      });
+    }
   }
 
-  // Multas (create for some 'Faltó')
-  for (const ins of inscripciones.filter(i => i.estado_asistencia === EstadoAsistencia.FALTO)) {
-    await prisma.multa.create({
-      data: {
-        inscripcion_id: ins.inscripcion_id,
-        estudiante_id: ins.estudiante_id,
-        monto: 10,
-        estado_pago: EstadoPago.PENDIENTE
-      }
-    });
-    // update saldo_pendiente
-    await prisma.estudiante.update({
-      where: { estudiante_id: ins.estudiante_id },
-      data: { saldo_pendiente: { increment: 10 } }
-    });
-  }
-
-  console.log('Seed completed');
+  console.log('Seed completed successfully');
 }
 
 main()
-  .catch(e => { console.error(e); process.exit(1); })
-  .finally(async () => { await prisma.$disconnect(); });
+  .catch(e => {
+    console.error('Error during seed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });

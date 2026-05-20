@@ -7,6 +7,17 @@ const getErrorMessage = (error: unknown): string => {
   return 'Error interno del servidor';
 };
 
+const toEstadoAsistenciaEnum = (estado: UpdateInscripcionDTO['estado_asistencia']) => {
+  const estadoMap = {
+    Programada: 'PROGRAMADA',
+    'Asistió': 'ASISTIO',
+    'Faltó': 'FALTO',
+    Cancelada: 'CANCELADA',
+  } as const;
+
+  return estadoMap[estado];
+};
+
 export const getInscripciones = async (req: Request, res: Response) => {
   try {
     const inscripciones = await prisma.inscripcion.findMany({
@@ -96,10 +107,12 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
       return res.status(400).json({ success: false, error: 'Requerido: estado_asistencia' });
     }
 
+    const estadoEnum = toEstadoAsistenciaEnum(estado_asistencia);
+
     // This update triggers PostgreSQL trigger for multa generation when state is Faltó.
     const inscripcion = await prisma.inscripcion.update({
       where: { inscripcion_id: parseInt(id) },
-      data: { estado_asistencia },
+      data: { estado_asistencia: estadoEnum },
       include: {
         estudiante: true,
         sesion: { include: { nivel: true, profesor: true, salon: true } },
@@ -120,14 +133,31 @@ export const updateInscripcionAsistencia = async (req: Request, res: Response) =
 export const deleteInscripcion = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const inscripcionId = parseInt(id);
 
-    // Before deleting inscription, release one seat in the related session.
     const inscripcion = await prisma.inscripcion.findUnique({
-      where: { inscripcion_id: parseInt(id) },
+      where: { inscripcion_id: inscripcionId },
     });
 
     if (!inscripcion) {
       return res.status(404).json({ success: false, error: 'Inscripción no encontrada' });
+    }
+
+    // Delete related multas first and adjust student balance for pending ones
+    const multas = await prisma.multa.findMany({
+      where: { inscripcion_id: inscripcionId },
+    });
+
+    for (const multa of multas) {
+      if (multa.estado_pago === 'PENDIENTE') {
+        await prisma.estudiante.update({
+          where: { estudiante_id: inscripcion.estudiante_id },
+          data: { saldo_pendiente: { decrement: multa.monto } },
+        });
+      }
+      await prisma.multa.delete({
+        where: { multa_id: multa.multa_id },
+      });
     }
 
     await prisma.sesion.update({
@@ -136,7 +166,7 @@ export const deleteInscripcion = async (req: Request, res: Response) => {
     });
 
     await prisma.inscripcion.delete({
-      where: { inscripcion_id: parseInt(id) },
+      where: { inscripcion_id: inscripcionId },
     });
 
     res.json({ success: true, message: 'Inscripción cancelada y cupo liberado' });

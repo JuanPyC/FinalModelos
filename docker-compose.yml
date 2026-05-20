@@ -52,5 +52,18 @@ services:
       - "5555:5555"
     command: npx prisma studio --browser none --port 5555
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: speakup_frontend:latest
+    container_name: speakup_ui
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+
 volumes:
   speakup_db_data:

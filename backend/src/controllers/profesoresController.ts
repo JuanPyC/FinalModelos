@@ -2,6 +2,11 @@ import { Request, Response } from 'express';
 import prisma from '../utils/db';
 import { CreateProfesorDTO, ApiResponse } from '../types';
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return 'Error interno del servidor';
+};
+
 export const getProfesores = async (req: Request, res: Response) => {
   try {
     const profesores = await prisma.profesor.findMany({
@@ -10,7 +15,7 @@ export const getProfesores = async (req: Request, res: Response) => {
     });
     res.json({ success: true, data: profesores } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -24,7 +29,7 @@ export const getProfesorById = async (req: Request, res: Response) => {
     if (!profesor) return res.status(404).json({ success: false, error: 'Profesor no encontrado' });
     res.json({ success: true, data: profesor } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -41,7 +46,7 @@ export const createProfesor = async (req: Request, res: Response) => {
     });
     res.status(201).json({ success: true, data: profesor, message: 'Profesor creado exitosamente' } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -54,7 +59,7 @@ export const updateProfesor = async (req: Request, res: Response) => {
     });
     res.json({ success: true, data: profesor, message: 'Profesor actualizado' } as ApiResponse<any>);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };
 
@@ -66,6 +71,6 @@ export const deleteProfesor = async (req: Request, res: Response) => {
     });
     res.json({ success: true, message: 'Profesor eliminado' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 };

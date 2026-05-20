@@ -13,15 +13,15 @@ import nivelesRouter from './niveles';
 import salonesRouter from './salones';
 import sesionesRouter from './sesiones';
 import estudiantesRouter from './estudiantes';
-// import inscripcionesRouter from './inscripciones';
-import multasRouter from './multas';
+import inscripcionesRouter from './inscripciones';
+// import multasRouter from './multas';
 
 router.use('/niveles', nivelesRouter);
 // router.use('/profesores', profesoresRouter);
 router.use('/salones', salonesRouter);
 router.use('/sesiones', sesionesRouter);
 router.use('/estudiantes', estudiantesRouter);
-// router.use('/inscripciones', inscripcionesRouter);
-router.use('/multas', multasRouter);
+router.use('/inscripciones', inscripcionesRouter);
+// router.use('/multas', multasRouter);
 
 export default router;

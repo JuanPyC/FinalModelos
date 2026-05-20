@@ -3,7 +3,14 @@ import prisma from '../utils/db';
 import { CreateInscripcionDTO, UpdateInscripcionDTO, ApiResponse } from '../types';
 
 const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    // Clean up Prisma Raw Query errors
+    if (error.message.includes('Raw query failed')) {
+      const match = error.message.match(/Message: `(.*?)`/);
+      if (match && match[1]) return match[1];
+    }
+    return error.message;
+  }
   return 'Error interno del servidor';
 };
 

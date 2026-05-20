@@ -78,6 +78,9 @@ export const useInscribirEstudiante = () => {
       queryClient.invalidateQueries({ queryKey: ['sesiones'] });
       queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
     },
+    onError: (error: any) => {
+      alert(error?.response?.data?.error || 'Error al inscribir estudiante');
+    }
   });
 };
 
@@ -92,5 +95,8 @@ export const useDeleteInscripcion = () => {
       queryClient.invalidateQueries({ queryKey: ['sesiones'] });
       queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
     },
+    onError: (error: any) => {
+      alert(error?.response?.data?.error || 'Error al eliminar inscripción');
+    }
   });
 };

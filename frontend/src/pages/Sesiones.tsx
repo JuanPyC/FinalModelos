@@ -247,10 +247,10 @@ export const Sesiones: React.FC = () => {
                   <p className="text-xs font-bold text-slate-500 uppercase mb-3">Inscribir Estudiante</p>
                   <select 
                     className="w-full px-4 py-2 rounded-xl border border-brand-border text-sm focus:ring-2 focus:ring-primary/20 outline-none mb-3"
+                    value=""
                     onChange={(e) => {
-                      if (e.target.value) {
+                      if (e.target.value && selectedSesion) {
                         handleEnroll(selectedSesion, parseInt(e.target.value));
-                        e.target.value = "";
                       }
                     }}
                   >

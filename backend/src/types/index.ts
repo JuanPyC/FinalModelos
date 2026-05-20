@@ -92,7 +92,6 @@ export interface SesionResponse {
   hora_inicio: string;
   duracion_min: number;
   cupos_disponibles: number;
-  fecha_creacion: Date;
 }
 
 // INSCRIPCION DTOs

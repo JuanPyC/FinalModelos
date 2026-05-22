@@ -260,4 +260,4 @@ El script SQL completo **(DDL + DML + consultas + trigger + SP)** se entrega com
 
 ---
 
-**Autores:** Marjaisabel Zuluaga Quintero - Juan Diego Gómez Guzmán
+**Autores:** Marjaisabel Zuluaga Quintero - Juan Diego Gómez Guzmán - Valentina Sierra Ospina

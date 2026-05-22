@@ -39,6 +39,11 @@ DO $$ BEGIN
   EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$ BEGIN
+  ALTER TABLE "INSCRIPCIONES" ADD CONSTRAINT insc_unique_student_session UNIQUE (estudiante_id, sesion_id);
+  EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
+END $$;
+
 -- 2) Create stored procedure to inscribe a student (atomically)
 CREATE OR REPLACE FUNCTION inscribir_estudiante(p_estudiante_id INTEGER, p_sesion_id INTEGER)
 RETURNS INTEGER AS $$
@@ -60,6 +65,9 @@ BEGIN
   UPDATE "SESIONES" SET cupos_disponibles = cupos_disponibles - 1 WHERE sesion_id = p_sesion_id;
 
   RETURN v_insc_id;
+EXCEPTION
+  WHEN unique_violation THEN
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 

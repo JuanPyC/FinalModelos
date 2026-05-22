@@ -1,13 +1,17 @@
 BEGIN;
 
--- NIVELES (6)
+-- NIVELES (10)
 INSERT INTO "NIVELES" (nombre, descripcion, duracion_semanas, precio) VALUES
-('A1','Nivel A1',12,100.00),
-('A2','Nivel A2',12,120.00),
-('B1','Nivel B1',12,140.00),
-('B2','Nivel B2',12,160.00),
-('C1','Nivel C1',12,180.00),
-('C2','Nivel C2',12,200.00)
+('A1', 'Nivel básico elemental', 12, 100.00),
+('A2', 'Nivel básico elemental avanzado', 12, 120.00),
+('B1', 'Nivel intermedio', 12, 140.00),
+('B2', 'Nivel intermedio alto', 12, 160.00),
+('C1', 'Nivel avanzado', 12, 180.00),
+('C2', 'Nivel maestría', 12, 200.00),
+('A1+', 'Nivel básico elemental consolidado', 12, 110.00),
+('A2+', 'Nivel básico elemental avanzado consolidado', 12, 130.00),
+('B1+', 'Nivel intermedio consolidado', 12, 150.00),
+('B2+', 'Nivel intermedio alto consolidado', 12, 170.00)
 ON CONFLICT (nombre) DO NOTHING;
 
 -- PROFESORES (10)
@@ -70,24 +74,45 @@ INSERT INTO "SESIONES" (nivel_id, profesor_id, salon_id, fecha, hora_inicio, dur
 (6,2,3,'2026-06-12','16:00:00',60,20)
 ;
 
--- INSCRIPCIONES (10)
+-- INSCRIPCIONES (19 registros - relación N:M con estados variados, incluyendo 10 faltas)
 INSERT INTO "INSCRIPCIONES" (estudiante_id, sesion_id, estado_asistencia) VALUES
-(1,1,'Asistió'),
-(2,1,'Faltó'),
-(3,2,'Programada'),
-(4,3,'Programada'),
-(5,4,'Asistió'),
-(6,5,'Faltó'),
-(7,6,'Programada'),
-(8,7,'Programada'),
-(9,8,'Asistió'),
-(10,9,'Programada')
+(1, 1, 'ASISTIO'),
+(2, 1, 'FALTO'),
+(3, 2, 'PROGRAMADA'),
+(4, 3, 'PROGRAMADA'),
+(5, 4, 'ASISTIO'),
+(6, 5, 'FALTO'),
+(7, 6, 'PROGRAMADA'),
+(8, 7, 'PROGRAMADA'),
+(9, 8, 'ASISTIO'),
+(10, 9, 'FALTO'),
+(11, 10, 'ASISTIO'),
+(12, 11, 'CANCELADA'),
+-- Nuevas inscripciones con estado FALTO para alcanzar el mínimo de 10 multas
+(1, 2, 'FALTO'),
+(3, 3, 'FALTO'),
+(4, 4, 'FALTO'),
+(5, 5, 'FALTO'),
+(7, 7, 'FALTO'),
+(8, 8, 'FALTO'),
+(9, 9, 'FALTO')
 ON CONFLICT DO NOTHING;
 
--- MULTAS (for some 'Faltó')
+-- MULTAS (10 registros para cumplir con la rúbrica)
 INSERT INTO "MULTAS" (inscripcion_id, estudiante_id, monto, estado_pago) VALUES
-((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=2 AND sesion_id=1),2,10,'Pendiente'),
-((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=6 AND sesion_id=5),6,10,'Pendiente')
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=2 AND sesion_id=1), 2, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=6 AND sesion_id=5), 6, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=10 AND sesion_id=9), 10, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=1 AND sesion_id=2), 1, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=3 AND sesion_id=3), 3, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=4 AND sesion_id=4), 4, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=5 AND sesion_id=5), 5, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=7 AND sesion_id=7), 7, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=8 AND sesion_id=8), 8, 10.00, 'PENDIENTE'),
+((SELECT inscripcion_id FROM "INSCRIPCIONES" WHERE estudiante_id=9 AND sesion_id=9), 9, 10.00, 'PENDIENTE')
 ON CONFLICT DO NOTHING;
+
+-- Actualizar saldo de estudiantes
+UPDATE "ESTUDIANTES" SET saldo_pendiente = 10.00 WHERE estudiante_id IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
 COMMIT;

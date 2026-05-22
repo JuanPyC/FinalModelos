@@ -46,11 +46,11 @@ CREATE TYPE estado_pago_enum AS ENUM ('PENDIENTE', 'PAGADA');
 -- ============================================================================
 CREATE TABLE NIVELES (
   nivel_id SERIAL PRIMARY KEY,
-  nombre VARCHAR(10) NOT NULL UNIQUE, -- A1, A2, B1, B2, C1, C2
+  nombre VARCHAR(10) NOT NULL UNIQUE, -- A1, A2, B1, B2, C1, C2 y niveles intermedios (+)
   descripcion TEXT,
   duracion_semanas INTEGER NOT NULL CHECK (duracion_semanas > 0),
   precio NUMERIC(8,2) NOT NULL CHECK (precio >= 0),
-  CONSTRAINT niveles_nombre_check CHECK (nombre IN ('A1','A2','B1','B2','C1','C2'))
+  CONSTRAINT niveles_nombre_check CHECK (nombre IN ('A1','A2','B1','B2','C1','C2','A1+','A2+','B1+','B2+'))
 );
 
 -- ============================================================================
@@ -119,7 +119,7 @@ CREATE TABLE INSCRIPCIONES (
   estudiante_id INTEGER NOT NULL REFERENCES ESTUDIANTES(estudiante_id),
   sesion_id INTEGER NOT NULL REFERENCES SESIONES(sesion_id),
   fecha_inscripcion DATE NOT NULL DEFAULT CURRENT_DATE,
-  estado_asistencia estado_asistencia_enum NOT NULL DEFAULT 'Programada',
+  estado_asistencia estado_asistencia_enum NOT NULL DEFAULT 'PROGRAMADA',
   CONSTRAINT insc_unique_student_session UNIQUE (estudiante_id, sesion_id)
 );
 
@@ -134,21 +134,25 @@ CREATE TABLE MULTAS (
   estudiante_id INTEGER NOT NULL REFERENCES ESTUDIANTES(estudiante_id),
   monto NUMERIC(8,2) NOT NULL DEFAULT 10.00 CHECK (monto > 0),
   fecha_generacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  estado_pago estado_pago_enum NOT NULL DEFAULT 'Pendiente'
+  estado_pago estado_pago_enum NOT NULL DEFAULT 'PENDIENTE'
 );
 
 -- ============================================================================
 -- 3. DML: INSERT DATA (≥10 PER MAIN TABLE)
 -- ============================================================================
 
--- NIVELES (6 registros - todos los niveles MCER)
+-- NIVELES (10 registros - niveles MCER principales e intermedios para cumplir con la rúbrica)
 INSERT INTO NIVELES (nombre, descripcion, duracion_semanas, precio) VALUES
 ('A1', 'Nivel básico elemental', 12, 100.00),
 ('A2', 'Nivel básico elemental avanzado', 12, 120.00),
 ('B1', 'Nivel intermedio', 12, 140.00),
 ('B2', 'Nivel intermedio alto', 12, 160.00),
 ('C1', 'Nivel avanzado', 12, 180.00),
-('C2', 'Nivel maestría', 12, 200.00);
+('C2', 'Nivel maestría', 12, 200.00),
+('A1+', 'Nivel básico elemental consolidado', 12, 110.00),
+('A2+', 'Nivel básico elemental avanzado consolidado', 12, 130.00),
+('B1+', 'Nivel intermedio consolidado', 12, 150.00),
+('B2+', 'Nivel intermedio alto consolidado', 12, 170.00);
 
 -- SALONES (10 registros)
 INSERT INTO SALONES (nombre, capacidad, equipado) VALUES
@@ -206,7 +210,7 @@ INSERT INTO ESTUDIANTES (nombre, email, telefono, fecha_nacimiento) VALUES
 ('Miguel Ángel Vargas', 'miguel.vargas@mail.com', '300-555-1011', '1990-11-05'),
 ('Isabelle Durand Gómez', 'isabelle.durand@mail.com', '300-555-1012', '1989-12-12');
 
--- INSCRIPCIONES (10+ registros - relación N:M con estados variados)
+-- INSCRIPCIONES (19 registros - relación N:M con estados variados, incluyendo 10 faltas)
 INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia) VALUES
 (1, 1, 'ASISTIO'),
 (2, 1, 'FALTO'),
@@ -219,19 +223,34 @@ INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia) VALUES
 (9, 8, 'ASISTIO'),
 (10, 9, 'FALTO'),
 (11, 10, 'ASISTIO'),
-(12, 11, 'CANCELADA');
+(12, 11, 'CANCELADA'),
+-- Nuevas inscripciones con estado FALTO para alcanzar el mínimo de 10 multas
+(1, 2, 'FALTO'),
+(3, 3, 'FALTO'),
+(4, 4, 'FALTO'),
+(5, 5, 'FALTO'),
+(7, 7, 'FALTO'),
+(8, 8, 'FALTO'),
+(9, 9, 'FALTO');
 
--- MULTAS (Iniciales - algunas ya generadas por faltas anteriores)
+-- MULTAS (10 registros para cumplir con la rúbrica)
 INSERT INTO MULTAS (inscripcion_id, estudiante_id, monto, estado_pago) VALUES
-(2, 2, 10.00, 'Pendiente'),
-(6, 6, 10.00, 'Pendiente'),
-(10, 10, 10.00, 'Pendiente');
+(2, 2, 10.00, 'PENDIENTE'),
+(6, 6, 10.00, 'PENDIENTE'),
+(10, 10, 10.00, 'PENDIENTE'),
+(13, 1, 10.00, 'PENDIENTE'),
+(14, 3, 10.00, 'PENDIENTE'),
+(15, 4, 10.00, 'PENDIENTE'),
+(16, 5, 10.00, 'PENDIENTE'),
+(17, 7, 10.00, 'PENDIENTE'),
+(18, 8, 10.00, 'PENDIENTE'),
+(19, 9, 10.00, 'PENDIENTE');
 
 -- Update saldo_pendiente for students with multas
-UPDATE ESTUDIANTES SET saldo_pendiente = 10.00 WHERE estudiante_id IN (2, 6, 10);
+UPDATE ESTUDIANTES SET saldo_pendiente = 10.00 WHERE estudiante_id IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
 -- ============================================================================
--- 4. DML: BASIC QUERIES (at least 5 - SELECT, WHERE, ORDER BY, LIMIT, LIKE)
+-- 4. DML: BASIC QUERIES (SELECT, WHERE, ORDER BY, LIMIT, LIKE, BETWEEN)
 -- ============================================================================
 
 -- Q1: Listar todos los profesores ordenados por apellido (LIKE pattern)
@@ -266,14 +285,26 @@ SELECT i.inscripcion_id, e.nombre AS estudiante, s.fecha, i.estado_asistencia
 FROM INSCRIPCIONES i
 JOIN ESTUDIANTES e ON i.estudiante_id = e.estudiante_id
 JOIN SESIONES s ON i.sesion_id = s.sesion_id
-WHERE i.estado_asistencia IN ('Cancelada', 'Faltó')
+WHERE i.estado_asistencia IN ('CANCELADA', 'FALTO')
 ORDER BY s.fecha DESC;
 
+-- Q6: Estudiantes paginados con LIMIT/OFFSET (Extra de v2)
+SELECT estudiante_id, nombre, email
+FROM ESTUDIANTES
+ORDER BY estudiante_id
+LIMIT 5 OFFSET 5;
+
+-- Q7: Estudiantes con email de dominio mail.com (LIKE) (Extra de v2)
+SELECT estudiante_id, nombre, email
+FROM ESTUDIANTES
+WHERE email LIKE '%@mail.com'
+ORDER BY nombre;
+
 -- ============================================================================
--- 5. AGGREGATE QUERIES (at least 3 - COUNT, SUM, GROUP BY, HAVING)
+-- 5. AGGREGATE QUERIES (COUNT, SUM, AVG, MIN, MAX, GROUP BY, HAVING)
 -- ============================================================================
 
--- Q6: Cantidad de inscripciones por nivel de curso (GROUP BY)
+-- Q8: Cantidad de inscripciones por nivel de curso (GROUP BY)
 SELECT n.nombre AS nivel, COUNT(i.inscripcion_id) AS total_inscripciones
 FROM NIVELES n
 LEFT JOIN SESIONES s ON n.nivel_id = s.nivel_id
@@ -281,7 +312,7 @@ LEFT JOIN INSCRIPCIONES i ON s.sesion_id = i.sesion_id
 GROUP BY n.nivel_id, n.nombre
 ORDER BY n.nivel_id;
 
--- Q7: Profesores con más sesiones enseñadas (GROUP BY, HAVING)
+-- Q9: Profesores con más sesiones enseñadas (GROUP BY, HAVING)
 SELECT p.profesor_id, p.nombre, COUNT(s.sesion_id) AS num_sesiones
 FROM PROFESORES p
 LEFT JOIN SESIONES s ON p.profesor_id = s.profesor_id
@@ -289,7 +320,7 @@ GROUP BY p.profesor_id, p.nombre
 HAVING COUNT(s.sesion_id) >= 1
 ORDER BY num_sesiones DESC;
 
--- Q8: Ingresos totales y promedio por nivel (SUM, AVG, GROUP BY)
+-- Q10: Ingresos totales y promedio por nivel (SUM, AVG, GROUP BY)
 SELECT n.nombre AS nivel, 
        COUNT(DISTINCT s.sesion_id) AS num_sesiones,
        SUM(n.precio) AS ingresos_totales,
@@ -299,11 +330,20 @@ LEFT JOIN SESIONES s ON n.nivel_id = s.nivel_id
 GROUP BY n.nivel_id, n.nombre, n.precio
 ORDER BY ingresos_totales DESC NULLS LAST;
 
+-- Q11: Rangos de saldo pendiente por estado de asistencia (MIN, MAX) (Extra de v2)
+SELECT i.estado_asistencia,
+  MIN(e.saldo_pendiente) AS saldo_min,
+  MAX(e.saldo_pendiente) AS saldo_max
+FROM INSCRIPCIONES i
+JOIN ESTUDIANTES e ON i.estudiante_id = e.estudiante_id
+GROUP BY i.estado_asistencia
+ORDER BY i.estado_asistencia;
+
 -- ============================================================================
--- 6. JOIN QUERIES (at least 3 - INNER JOIN, LEFT JOIN with 2+ tables)
+-- 6. JOIN QUERIES (INNER JOIN, LEFT JOIN with 2+ tables)
 -- ============================================================================
 
--- Q9: Estudiantes inscriptos con profesores y niveles (INNER JOINs - 4 tablas)
+-- Q12: Estudiantes inscriptos con profesores y niveles (INNER JOINs - 4 tablas)
 SELECT e.nombre AS estudiante, 
        n.nombre AS nivel,
        p.nombre AS profesor,
@@ -316,7 +356,7 @@ INNER JOIN NIVELES n ON s.nivel_id = n.nivel_id
 INNER JOIN PROFESORES p ON s.profesor_id = p.profesor_id
 ORDER BY s.fecha DESC;
 
--- Q10: Estudiantes con sus multas pendientes (LEFT JOIN - multas may be NULL)
+-- Q13: Estudiantes con sus multas pendientes (LEFT JOIN - multas may be NULL)
 SELECT e.estudiante_id,
        e.nombre,
        e.email,
@@ -324,11 +364,11 @@ SELECT e.estudiante_id,
        SUM(m.monto) AS total_multas_pendientes,
        e.saldo_pendiente
 FROM ESTUDIANTES e
-LEFT JOIN MULTAS m ON e.estudiante_id = m.estudiante_id AND m.estado_pago = 'Pendiente'
+LEFT JOIN MULTAS m ON e.estudiante_id = m.estudiante_id AND m.estado_pago = 'PENDIENTE'
 GROUP BY e.estudiante_id, e.nombre, e.email, e.saldo_pendiente
 ORDER BY total_multas_pendientes DESC NULLS LAST;
 
--- Q11: Sesiones disponibles con salón y profesor asignado (INNER JOINs)
+-- Q14: Sesiones disponibles con salón y profesor asignado (INNER JOINs)
 SELECT s.sesion_id,
        sal.nombre AS salon,
        p.nombre AS profesor,
@@ -344,11 +384,23 @@ INNER JOIN NIVELES n ON s.nivel_id = n.nivel_id
 WHERE s.cupos_disponibles > 0
 ORDER BY s.fecha;
 
+-- Q15: Estudiantes con o sin multas pendientes (LEFT JOIN 3 tablas) (Extra de v2)
+SELECT e.estudiante_id,
+  e.nombre,
+  i.sesion_id,
+  m.multa_id,
+  m.estado_pago
+FROM ESTUDIANTES e
+LEFT JOIN INSCRIPCIONES i ON e.estudiante_id = i.estudiante_id
+LEFT JOIN MULTAS m ON i.inscripcion_id = m.inscripcion_id
+WHERE m.multa_id IS NULL OR m.estado_pago = 'PENDIENTE'
+ORDER BY e.estudiante_id, i.sesion_id;
+
 -- ============================================================================
 -- 7. SET OPERATIONS (UNION, INTERSECT, EXCEPT)
 -- ============================================================================
 
--- Q12: UNION - Nombres de todos los actores (profesores + estudiantes)
+-- Q16: UNION - Nombres de todos los actores (profesores + estudiantes)
 SELECT p.nombre AS nombre, 'Profesor' AS rol, p.email
 FROM PROFESORES p
 WHERE p.activo = TRUE
@@ -357,7 +409,7 @@ SELECT e.nombre AS nombre, 'Estudiante' AS rol, e.email
 FROM ESTUDIANTES e
 ORDER BY nombre;
 
--- Q13: EXCEPT - Profesores sin sesiones asignadas
+-- Q17: EXCEPT - Profesores sin sesiones asignadas
 SELECT p.profesor_id, p.nombre
 FROM PROFESORES p
 EXCEPT
@@ -366,7 +418,7 @@ FROM PROFESORES p
 INNER JOIN SESIONES s ON p.profesor_id = s.profesor_id
 ORDER BY nombre;
 
--- Q14: INTERSECT - Salones usados por profesores con especialidad en niveles avanzados
+-- Q18: INTERSECT - Salones usados por profesores con especialidad en niveles avanzados
 SELECT sal.salon_id, sal.nombre
 FROM SALONES sal
 INNER JOIN SESIONES s ON sal.salon_id = s.salon_id
@@ -382,7 +434,7 @@ ORDER BY nombre;
 -- 8. ADVANCED LOGIC QUERIES
 -- ============================================================================
 
--- Q15: Reporte de estudiantes y su historial de asistencia
+-- Q19: Reporte de estudiantes y su historial de asistencia
 SELECT e.nombre,
        COUNT(i.inscripcion_id) AS total_sesiones,
        SUM(CASE WHEN i.estado_asistencia = 'ASISTIO' THEN 1 ELSE 0 END) AS asistencias,
@@ -432,7 +484,7 @@ BEGIN
 
   -- Insert inscription record
   INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia)
-  VALUES (p_estudiante_id, p_sesion_id, 'Programada')
+  VALUES (p_estudiante_id, p_sesion_id, 'PROGRAMADA')
   RETURNING INSCRIPCIONES.inscripcion_id INTO v_insc_id;
 
   -- Decrement available slots
@@ -466,9 +518,9 @@ DECLARE
 BEGIN
   -- Only process UPDATE operations
   IF TG_OP = 'UPDATE' THEN
-    -- Check if estado_asistencia changed TO 'Faltó'
-    IF NEW.estado_asistencia = 'Faltó' AND 
-       (OLD.estado_asistencia IS DISTINCT FROM 'Faltó') THEN
+    -- Check if estado_asistencia changed TO 'FALTO'
+    IF NEW.estado_asistencia = 'FALTO' AND 
+       (OLD.estado_asistencia IS DISTINCT FROM 'FALTO') THEN
       
       -- Prevent duplicate multas for same inscription
       SELECT 1 INTO v_exists 
@@ -479,7 +531,7 @@ BEGIN
       IF NOT FOUND THEN
         -- Create fine record
         INSERT INTO MULTAS (inscripcion_id, estudiante_id, monto, estado_pago)
-        VALUES (NEW.inscripcion_id, NEW.estudiante_id, 10.00, 'Pendiente');
+        VALUES (NEW.inscripcion_id, NEW.estudiante_id, 10.00, 'PENDIENTE');
         
         -- Update student pending balance
         UPDATE ESTUDIANTES 

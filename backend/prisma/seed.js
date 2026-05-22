@@ -26,7 +26,7 @@ async function main() {
   await prisma.nivel.deleteMany({});
 
   // Niveles
-  const nivelesNames = ['A1','A2','B1','B2','C1','C2'];
+  const nivelesNames = ['A1','A2','B1','B2','C1','C2','A1+','A2+','B1+','B2+'];
   const niveles = [];
   for (const n of nivelesNames) {
     const nivel = await prisma.nivel.create({
@@ -81,7 +81,7 @@ async function main() {
   for (let i = 0; i < 10; i++) {
     const ses = await prisma.sesion.create({
       data: {
-        nivel_id: niveles[i % 6].nivel_id,
+        nivel_id: niveles[i % 10].nivel_id,
         profesor_id: profs[i % 10].profesor_id,
         salon_id: salons[i % 10].salon_id,
         fecha: new Date(2026, 5, 20 + i),
@@ -93,18 +93,41 @@ async function main() {
     sessions.push(ses);
   }
 
-  // Inscripciones
-  for (let i = 0; i < 5; i++) {
+  // Inscripciones (19 registros - relación N:M con estados variados, incluyendo 10 faltas)
+  const inscripcionesData = [
+    { studentIdx: 0, sessionIdx: 0, estado: 'ASISTIO' },     // (1, 1)
+    { studentIdx: 1, sessionIdx: 0, estado: 'FALTO' },       // (2, 1) -> multa 1
+    { studentIdx: 2, sessionIdx: 1, estado: 'PROGRAMADA' },  // (3, 2)
+    { studentIdx: 3, sessionIdx: 2, estado: 'PROGRAMADA' },  // (4, 3)
+    { studentIdx: 4, sessionIdx: 3, estado: 'ASISTIO' },     // (5, 4)
+    { studentIdx: 5, sessionIdx: 4, estado: 'FALTO' },       // (6, 5) -> multa 2
+    { studentIdx: 6, sessionIdx: 5, estado: 'PROGRAMADA' },  // (7, 6)
+    { studentIdx: 7, sessionIdx: 6, estado: 'PROGRAMADA' },  // (8, 7)
+    { studentIdx: 8, sessionIdx: 7, estado: 'ASISTIO' },     // (9, 8)
+    { studentIdx: 9, sessionIdx: 8, estado: 'FALTO' },       // (10, 9) -> multa 3
+    { studentIdx: 10, sessionIdx: 9, estado: 'ASISTIO' },    // (11, 10)
+    { studentIdx: 11, sessionIdx: 9, estado: 'CANCELADA' },  // (12, 10)
+    
+    // Nuevas inscripciones con estado FALTO para alcanzar el mínimo de 10 multas
+    { studentIdx: 0, sessionIdx: 1, estado: 'FALTO' },       // (1, 2) -> multa 4
+    { studentIdx: 2, sessionIdx: 2, estado: 'FALTO' },       // (3, 3) -> multa 5
+    { studentIdx: 3, sessionIdx: 3, estado: 'FALTO' },       // (4, 4) -> multa 6
+    { studentIdx: 4, sessionIdx: 4, estado: 'FALTO' },       // (5, 5) -> multa 7
+    { studentIdx: 6, sessionIdx: 6, estado: 'FALTO' },       // (7, 7) -> multa 8
+    { studentIdx: 7, sessionIdx: 7, estado: 'FALTO' },       // (8, 8) -> multa 9
+    { studentIdx: 8, sessionIdx: 8, estado: 'FALTO' }        // (9, 9) -> multa 10
+  ];
+
+  for (const item of inscripcionesData) {
     const ins = await prisma.inscripcion.create({
       data: {
-        estudiante_id: students[i].estudiante_id,
-        sesion_id: sessions[i].sesion_id,
-        estado_asistencia: i === 0 ? 'FALTO' : 'PROGRAMADA'
+        estudiante_id: students[item.studentIdx].estudiante_id,
+        sesion_id: sessions[item.sessionIdx].sesion_id,
+        estado_asistencia: item.estado
       }
     });
 
-    // Si faltó, crear una multa manualmente (aunque haya un trigger, esto asegura que el endpoint de multas tenga algo)
-    if (i === 0) {
+    if (item.estado === 'FALTO') {
       await prisma.multa.create({
         data: {
           inscripcion_id: ins.inscripcion_id,

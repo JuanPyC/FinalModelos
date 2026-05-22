@@ -87,9 +87,16 @@ export const createInscripcion = async (req: Request, res: Response) => {
     // Calls stored procedure that validates cupos and inserts atomically.
     const result = (await prisma.$queryRaw`
       SELECT inscribir_estudiante(${estudiante_id}, ${sesion_id}) AS inscripcion_id
-    `) as Array<{ inscripcion_id: number }>;
+    `) as Array<{ inscripcion_id: number | null }>;
 
     const inscripcionId = result?.[0]?.inscripcion_id;
+
+    if (inscripcionId === null) {
+      return res.status(409).json({
+        success: false,
+        error: 'El estudiante ya está inscrito en esta sesión',
+      });
+    }
 
     if (!inscripcionId) {
       return res.status(500).json({ success: false, error: 'Error al procesar inscripción' });

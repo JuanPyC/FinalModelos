@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
               <div key={est.estudiante_id} className="flex items-center justify-between p-3 rounded-xl hover:bg-brand-secondary transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-                    {est.nombre.split(' ').map(n => n[0]).join('')}
+                    {est.nombre.split(' ').filter(Boolean).map(n => n[0]).join('')}
                   </div>
                   <div>
                     <p className="font-semibold text-brand-slate">{est.nombre}</p>

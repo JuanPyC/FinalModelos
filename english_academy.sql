@@ -4,7 +4,7 @@ TRABAJO FINAL — MODELO DE DATOS PARA ACADEMIA DE INGLÉS "SPEAK UP"
 ================================================================================
 Motor: PostgreSQL 16
 Base de Datos: english_academy_db
-Autores: Marjaisabel Zuluaga Quintero, Juan Diego Gómez Guzmán
+Autores: Marjaisabel Zuluaga Quintero, Juan Diego Gómez Guzmán, Valentina Sierra Ospina
 Fecha: 2026-05-20
 
 DESCRIPCIÓN:

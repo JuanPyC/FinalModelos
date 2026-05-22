@@ -14,7 +14,7 @@ Sistema de gestión para Academia de Inglés que automatiza:
 - Gestión de profesores, niveles (A1–C2 MCER), salones y sesiones
 - Cálculo automático de saldo pendiente del estudiante
 
-NORMALIZACIÓN: 7 tablas en 3FN con relación N:M (INSCRIPCIONES)
+NORMALIZACIÓN: 7 tablas en 3FN con relación N:M ("INSCRIPCIONES")
 ================================================================================
 */
 
@@ -41,10 +41,10 @@ CREATE TYPE estado_asistencia_enum AS ENUM ('PROGRAMADA', 'ASISTIO', 'FALTO', 'C
 CREATE TYPE estado_pago_enum AS ENUM ('PENDIENTE', 'PAGADA');
 
 -- ============================================================================
--- Table: NIVELES (Base - No FK saliente)
+-- Table: "NIVELES" (Base - No FK saliente)
 -- Descripción: Niveles MCER de inglés (A1-C2) con duración y precio
 -- ============================================================================
-CREATE TABLE NIVELES (
+CREATE TABLE "NIVELES" (
   nivel_id SERIAL PRIMARY KEY,
   nombre VARCHAR(10) NOT NULL UNIQUE, -- A1, A2, B1, B2, C1, C2 y niveles intermedios (+)
   descripcion TEXT,
@@ -54,10 +54,10 @@ CREATE TABLE NIVELES (
 );
 
 -- ============================================================================
--- Table: SALONES (Base - No FK saliente)
+-- Table: "SALONES" (Base - No FK saliente)
 -- Descripción: Salones físicos con capacidad y equipo disponible
 -- ============================================================================
-CREATE TABLE SALONES (
+CREATE TABLE "SALONES" (
   salon_id SERIAL PRIMARY KEY,
   nombre VARCHAR(50) NOT NULL UNIQUE, -- Ej. Sala A, Sala B
   capacidad INTEGER NOT NULL CHECK (capacidad > 0),
@@ -66,10 +66,10 @@ CREATE TABLE SALONES (
 );
 
 -- ============================================================================
--- Table: PROFESORES (Base - No FK saliente)
+-- Table: "PROFESORES" (Base - No FK saliente)
 -- Descripción: Profesores de inglés con especialidad en nivel máximo
 -- ============================================================================
-CREATE TABLE PROFESORES (
+CREATE TABLE "PROFESORES" (
   profesor_id SERIAL PRIMARY KEY,
   nombre VARCHAR(80) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
@@ -80,14 +80,14 @@ CREATE TABLE PROFESORES (
 );
 
 -- ============================================================================
--- Table: SESIONES (Dependencia 1:N de NIVELES, PROFESORES, SALONES)
+-- Table: "SESIONES" (Dependencia 1:N de "NIVELES", "PROFESORES", "SALONES")
 -- Descripción: Sesiones de clase programadas (relación de 3 FKs)
 -- ============================================================================
-CREATE TABLE SESIONES (
+CREATE TABLE "SESIONES" (
   sesion_id SERIAL PRIMARY KEY,
-  nivel_id INTEGER NOT NULL REFERENCES NIVELES(nivel_id),
-  profesor_id INTEGER NOT NULL REFERENCES PROFESORES(profesor_id),
-  salon_id INTEGER NOT NULL REFERENCES SALONES(salon_id),
+  nivel_id INTEGER NOT NULL REFERENCES "NIVELES"(nivel_id),
+  profesor_id INTEGER NOT NULL REFERENCES "PROFESORES"(profesor_id),
+  salon_id INTEGER NOT NULL REFERENCES "SALONES"(salon_id),
   fecha DATE NOT NULL,
   hora_inicio TIME NOT NULL,
   duracion_min INTEGER NOT NULL CHECK (duracion_min > 0),
@@ -96,10 +96,10 @@ CREATE TABLE SESIONES (
 );
 
 -- ============================================================================
--- Table: ESTUDIANTES (Base - No FK saliente, referenciada por INSCRIPCIONES y MULTAS)
+-- Table: "ESTUDIANTES" (Base - No FK saliente, referenciada por "INSCRIPCIONES" y "MULTAS")
 -- Descripción: Estudiantes registrados en la academia con saldo de multas
 -- ============================================================================
-CREATE TABLE ESTUDIANTES (
+CREATE TABLE "ESTUDIANTES" (
   estudiante_id SERIAL PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
@@ -110,28 +110,28 @@ CREATE TABLE ESTUDIANTES (
 );
 
 -- ============================================================================
--- Table: INSCRIPCIONES (N:M entre ESTUDIANTES y SESIONES)
+-- Table: "INSCRIPCIONES" (N:M entre "ESTUDIANTES" y "SESIONES")
 -- Descripción: Relación muchos-a-muchos con atributo estado_asistencia
 -- Normalización: 2FN → 3FN (tabla intermedia)
 -- ============================================================================
-CREATE TABLE INSCRIPCIONES (
+CREATE TABLE "INSCRIPCIONES" (
   inscripcion_id SERIAL PRIMARY KEY,
-  estudiante_id INTEGER NOT NULL REFERENCES ESTUDIANTES(estudiante_id),
-  sesion_id INTEGER NOT NULL REFERENCES SESIONES(sesion_id),
+  estudiante_id INTEGER NOT NULL REFERENCES "ESTUDIANTES"(estudiante_id),
+  sesion_id INTEGER NOT NULL REFERENCES "SESIONES"(sesion_id),
   fecha_inscripcion DATE NOT NULL DEFAULT CURRENT_DATE,
   estado_asistencia estado_asistencia_enum NOT NULL DEFAULT 'PROGRAMADA',
   CONSTRAINT insc_unique_student_session UNIQUE (estudiante_id, sesion_id)
 );
 
 -- ============================================================================
--- Table: MULTAS (Denormalización intencional: estudiante_id para rapidez)
+-- Table: "MULTAS" (Denormalización intencional: estudiante_id para rapidez)
 -- Descripción: Multas generadas automáticamente por faltas
 -- Referencia: inscripcion_id y estudiante_id (para auditoría rápida)
 -- ============================================================================
-CREATE TABLE MULTAS (
+CREATE TABLE "MULTAS" (
   multa_id SERIAL PRIMARY KEY,
-  inscripcion_id INTEGER NOT NULL REFERENCES INSCRIPCIONES(inscripcion_id),
-  estudiante_id INTEGER NOT NULL REFERENCES ESTUDIANTES(estudiante_id),
+  inscripcion_id INTEGER NOT NULL REFERENCES "INSCRIPCIONES"(inscripcion_id),
+  estudiante_id INTEGER NOT NULL REFERENCES "ESTUDIANTES"(estudiante_id),
   monto NUMERIC(8,2) NOT NULL DEFAULT 10.00 CHECK (monto > 0),
   fecha_generacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   estado_pago estado_pago_enum NOT NULL DEFAULT 'PENDIENTE'
@@ -141,8 +141,8 @@ CREATE TABLE MULTAS (
 -- 3. DML: INSERT DATA (≥10 PER MAIN TABLE)
 -- ============================================================================
 
--- NIVELES (10 registros - niveles MCER principales e intermedios para cumplir con la rúbrica)
-INSERT INTO NIVELES (nombre, descripcion, duracion_semanas, precio) VALUES
+-- "NIVELES" (10 registros - niveles MCER principales e intermedios para cumplir con la rúbrica)
+INSERT INTO "NIVELES" (nombre, descripcion, duracion_semanas, precio) VALUES
 ('A1', 'Nivel básico elemental', 12, 100.00),
 ('A2', 'Nivel básico elemental avanzado', 12, 120.00),
 ('B1', 'Nivel intermedio', 12, 140.00),
@@ -154,8 +154,8 @@ INSERT INTO NIVELES (nombre, descripcion, duracion_semanas, precio) VALUES
 ('B1+', 'Nivel intermedio consolidado', 12, 150.00),
 ('B2+', 'Nivel intermedio alto consolidado', 12, 170.00);
 
--- SALONES (10 registros)
-INSERT INTO SALONES (nombre, capacidad, equipado) VALUES
+-- "SALONES" (10 registros)
+INSERT INTO "SALONES" (nombre, capacidad, equipado) VALUES
 ('Sala A', 25, TRUE),
 ('Sala B', 20, TRUE),
 ('Sala C', 30, FALSE),
@@ -167,8 +167,8 @@ INSERT INTO SALONES (nombre, capacidad, equipado) VALUES
 ('Sala I', 24, FALSE),
 ('Sala J', 20, TRUE);
 
--- PROFESORES (10 registros)
-INSERT INTO PROFESORES (nombre, email, telefono, especialidad) VALUES
+-- "PROFESORES" (10 registros)
+INSERT INTO "PROFESORES" (nombre, email, telefono, especialidad) VALUES
 ('Dr. John Smith', 'john.smith@speakup.edu', '555-0101', 'C1'),
 ('Maria García López', 'maria.garcia@speakup.edu', '555-0102', 'B2'),
 ('Robert Johnson', 'robert.j@speakup.edu', '555-0103', 'A1'),
@@ -180,8 +180,8 @@ INSERT INTO PROFESORES (nombre, email, telefono, especialidad) VALUES
 ('Paulo Silva', 'paulo.s@speakup.edu', '555-0109', 'A1'),
 ('Catherine White', 'catherine.w@speakup.edu', '555-0110', 'C1');
 
--- SESIONES (12 registros - distribuidas por nivel/profesor/salon)
-INSERT INTO SESIONES (nivel_id, profesor_id, salon_id, fecha, hora_inicio, duracion_min, cupos_disponibles) VALUES
+-- "SESIONES" (12 registros - distribuidas por nivel/profesor/salon)
+INSERT INTO "SESIONES" (nivel_id, profesor_id, salon_id, fecha, hora_inicio, duracion_min, cupos_disponibles) VALUES
 (1, 3, 1, '2026-06-01', '09:00', 60, 10),
 (2, 6, 2, '2026-06-02', '10:00', 90, 12),
 (3, 4, 3, '2026-06-03', '11:00', 60, 8),
@@ -195,8 +195,8 @@ INSERT INTO SESIONES (nivel_id, profesor_id, salon_id, fecha, hora_inicio, durac
 (5, 1, 2, '2026-06-11', '14:00', 120, 10),
 (6, 2, 3, '2026-06-12', '16:00', 60, 20);
 
--- ESTUDIANTES (12 registros)
-INSERT INTO ESTUDIANTES (nombre, email, telefono, fecha_nacimiento) VALUES
+-- "ESTUDIANTES" (12 registros)
+INSERT INTO "ESTUDIANTES" (nombre, email, telefono, fecha_nacimiento) VALUES
 ('Juan Pérez González', 'juan.perez@mail.com', '300-555-1001', '1995-01-15'),
 ('María López Martínez', 'maria.lopez@mail.com', '300-555-1002', '1996-02-20'),
 ('Carlos Rodríguez Silva', 'carlos.silva@mail.com', '300-555-1003', '1997-03-25'),
@@ -210,8 +210,8 @@ INSERT INTO ESTUDIANTES (nombre, email, telefono, fecha_nacimiento) VALUES
 ('Miguel Ángel Vargas', 'miguel.vargas@mail.com', '300-555-1011', '1990-11-05'),
 ('Isabelle Durand Gómez', 'isabelle.durand@mail.com', '300-555-1012', '1989-12-12');
 
--- INSCRIPCIONES (19 registros - relación N:M con estados variados, incluyendo 10 faltas)
-INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia) VALUES
+-- "INSCRIPCIONES" (19 registros - relación N:M con estados variados, incluyendo 10 faltas)
+INSERT INTO "INSCRIPCIONES" (estudiante_id, sesion_id, estado_asistencia) VALUES
 (1, 1, 'ASISTIO'),
 (2, 1, 'FALTO'),
 (3, 2, 'PROGRAMADA'),
@@ -233,8 +233,8 @@ INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia) VALUES
 (8, 8, 'FALTO'),
 (9, 9, 'FALTO');
 
--- MULTAS (10 registros para cumplir con la rúbrica)
-INSERT INTO MULTAS (inscripcion_id, estudiante_id, monto, estado_pago) VALUES
+-- "MULTAS" (10 registros para cumplir con la rúbrica)
+INSERT INTO "MULTAS" (inscripcion_id, estudiante_id, monto, estado_pago) VALUES
 (2, 2, 10.00, 'PENDIENTE'),
 (6, 6, 10.00, 'PENDIENTE'),
 (10, 10, 10.00, 'PENDIENTE'),
@@ -247,7 +247,7 @@ INSERT INTO MULTAS (inscripcion_id, estudiante_id, monto, estado_pago) VALUES
 (19, 9, 10.00, 'PENDIENTE');
 
 -- Update saldo_pendiente for students with multas
-UPDATE ESTUDIANTES SET saldo_pendiente = 10.00 WHERE estudiante_id IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+UPDATE "ESTUDIANTES" SET saldo_pendiente = 10.00 WHERE estudiante_id IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
 -- ============================================================================
 -- 4. DML: BASIC QUERIES (SELECT, WHERE, ORDER BY, LIMIT, LIKE, BETWEEN)
@@ -255,48 +255,48 @@ UPDATE ESTUDIANTES SET saldo_pendiente = 10.00 WHERE estudiante_id IN (1, 2, 3, 
 
 -- Q1: Listar todos los profesores ordenados por apellido (LIKE pattern)
 SELECT profesor_id, nombre, email, especialidad 
-FROM PROFESORES 
+FROM "PROFESORES" 
 WHERE nombre LIKE '%García%' OR nombre LIKE '%Rodríguez%'
 ORDER BY nombre;
 
 -- Q2: Obtener sesiones de nivel B1 o superior con cupos disponibles
 SELECT s.sesion_id, n.nombre AS nivel, p.nombre AS profesor, s.fecha, s.hora_inicio, s.cupos_disponibles
-FROM SESIONES s
-JOIN NIVELES n ON s.nivel_id = n.nivel_id
-JOIN PROFESORES p ON s.profesor_id = p.profesor_id
+FROM "SESIONES" s
+JOIN "NIVELES" n ON s.nivel_id = n.nivel_id
+JOIN "PROFESORES" p ON s.profesor_id = p.profesor_id
 WHERE n.nivel_id >= 3 -- B1 or higher
 ORDER BY s.fecha
 LIMIT 5;
 
 -- Q3: Estudiantes registrados entre ciertas fechas (BETWEEN)
 SELECT estudiante_id, nombre, email, fecha_registro
-FROM ESTUDIANTES
+FROM "ESTUDIANTES"
 WHERE fecha_registro BETWEEN '2020-01-01' AND '2026-12-31'
 ORDER BY fecha_registro DESC;
 
 -- Q4: Salones con capacidad dentro de rango (WHERE with AND)
 SELECT salon_id, nombre, capacidad, equipado
-FROM SALONES
+FROM "SALONES"
 WHERE capacidad BETWEEN 15 AND 25 AND equipado = TRUE
 ORDER BY capacidad;
 
 -- Q5: Inscripciones canceladas o faltadas (WHERE IN)
 SELECT i.inscripcion_id, e.nombre AS estudiante, s.fecha, i.estado_asistencia
-FROM INSCRIPCIONES i
-JOIN ESTUDIANTES e ON i.estudiante_id = e.estudiante_id
-JOIN SESIONES s ON i.sesion_id = s.sesion_id
+FROM "INSCRIPCIONES" i
+JOIN "ESTUDIANTES" e ON i.estudiante_id = e.estudiante_id
+JOIN "SESIONES" s ON i.sesion_id = s.sesion_id
 WHERE i.estado_asistencia IN ('CANCELADA', 'FALTO')
 ORDER BY s.fecha DESC;
 
 -- Q6: Estudiantes paginados con LIMIT/OFFSET (Extra de v2)
 SELECT estudiante_id, nombre, email
-FROM ESTUDIANTES
+FROM "ESTUDIANTES"
 ORDER BY estudiante_id
 LIMIT 5 OFFSET 5;
 
 -- Q7: Estudiantes con email de dominio mail.com (LIKE) (Extra de v2)
 SELECT estudiante_id, nombre, email
-FROM ESTUDIANTES
+FROM "ESTUDIANTES"
 WHERE email LIKE '%@mail.com'
 ORDER BY nombre;
 
@@ -306,16 +306,16 @@ ORDER BY nombre;
 
 -- Q8: Cantidad de inscripciones por nivel de curso (GROUP BY)
 SELECT n.nombre AS nivel, COUNT(i.inscripcion_id) AS total_inscripciones
-FROM NIVELES n
-LEFT JOIN SESIONES s ON n.nivel_id = s.nivel_id
-LEFT JOIN INSCRIPCIONES i ON s.sesion_id = i.sesion_id
+FROM "NIVELES" n
+LEFT JOIN "SESIONES" s ON n.nivel_id = s.nivel_id
+LEFT JOIN "INSCRIPCIONES" i ON s.sesion_id = i.sesion_id
 GROUP BY n.nivel_id, n.nombre
 ORDER BY n.nivel_id;
 
 -- Q9: Profesores con más sesiones enseñadas (GROUP BY, HAVING)
 SELECT p.profesor_id, p.nombre, COUNT(s.sesion_id) AS num_sesiones
-FROM PROFESORES p
-LEFT JOIN SESIONES s ON p.profesor_id = s.profesor_id
+FROM "PROFESORES" p
+LEFT JOIN "SESIONES" s ON p.profesor_id = s.profesor_id
 GROUP BY p.profesor_id, p.nombre
 HAVING COUNT(s.sesion_id) >= 1
 ORDER BY num_sesiones DESC;
@@ -325,8 +325,8 @@ SELECT n.nombre AS nivel,
        COUNT(DISTINCT s.sesion_id) AS num_sesiones,
        SUM(n.precio) AS ingresos_totales,
        AVG(n.precio) AS precio_promedio
-FROM NIVELES n
-LEFT JOIN SESIONES s ON n.nivel_id = s.nivel_id
+FROM "NIVELES" n
+LEFT JOIN "SESIONES" s ON n.nivel_id = s.nivel_id
 GROUP BY n.nivel_id, n.nombre, n.precio
 ORDER BY ingresos_totales DESC NULLS LAST;
 
@@ -334,8 +334,8 @@ ORDER BY ingresos_totales DESC NULLS LAST;
 SELECT i.estado_asistencia,
   MIN(e.saldo_pendiente) AS saldo_min,
   MAX(e.saldo_pendiente) AS saldo_max
-FROM INSCRIPCIONES i
-JOIN ESTUDIANTES e ON i.estudiante_id = e.estudiante_id
+FROM "INSCRIPCIONES" i
+JOIN "ESTUDIANTES" e ON i.estudiante_id = e.estudiante_id
 GROUP BY i.estado_asistencia
 ORDER BY i.estado_asistencia;
 
@@ -349,11 +349,11 @@ SELECT e.nombre AS estudiante,
        p.nombre AS profesor,
        s.fecha,
        i.estado_asistencia
-FROM INSCRIPCIONES i
-INNER JOIN ESTUDIANTES e ON i.estudiante_id = e.estudiante_id
-INNER JOIN SESIONES s ON i.sesion_id = s.sesion_id
-INNER JOIN NIVELES n ON s.nivel_id = n.nivel_id
-INNER JOIN PROFESORES p ON s.profesor_id = p.profesor_id
+FROM "INSCRIPCIONES" i
+INNER JOIN "ESTUDIANTES" e ON i.estudiante_id = e.estudiante_id
+INNER JOIN "SESIONES" s ON i.sesion_id = s.sesion_id
+INNER JOIN "NIVELES" n ON s.nivel_id = n.nivel_id
+INNER JOIN "PROFESORES" p ON s.profesor_id = p.profesor_id
 ORDER BY s.fecha DESC;
 
 -- Q13: Estudiantes con sus multas pendientes (LEFT JOIN - multas may be NULL)
@@ -363,8 +363,8 @@ SELECT e.estudiante_id,
        COUNT(m.multa_id) AS num_multas,
        SUM(m.monto) AS total_multas_pendientes,
        e.saldo_pendiente
-FROM ESTUDIANTES e
-LEFT JOIN MULTAS m ON e.estudiante_id = m.estudiante_id AND m.estado_pago = 'PENDIENTE'
+FROM "ESTUDIANTES" e
+LEFT JOIN "MULTAS" m ON e.estudiante_id = m.estudiante_id AND m.estado_pago = 'PENDIENTE'
 GROUP BY e.estudiante_id, e.nombre, e.email, e.saldo_pendiente
 ORDER BY total_multas_pendientes DESC NULLS LAST;
 
@@ -377,10 +377,10 @@ SELECT s.sesion_id,
        s.hora_inicio,
        s.cupos_disponibles,
        sal.capacidad
-FROM SESIONES s
-INNER JOIN SALONES sal ON s.salon_id = sal.salon_id
-INNER JOIN PROFESORES p ON s.profesor_id = p.profesor_id
-INNER JOIN NIVELES n ON s.nivel_id = n.nivel_id
+FROM "SESIONES" s
+INNER JOIN "SALONES" sal ON s.salon_id = sal.salon_id
+INNER JOIN "PROFESORES" p ON s.profesor_id = p.profesor_id
+INNER JOIN "NIVELES" n ON s.nivel_id = n.nivel_id
 WHERE s.cupos_disponibles > 0
 ORDER BY s.fecha;
 
@@ -390,9 +390,9 @@ SELECT e.estudiante_id,
   i.sesion_id,
   m.multa_id,
   m.estado_pago
-FROM ESTUDIANTES e
-LEFT JOIN INSCRIPCIONES i ON e.estudiante_id = i.estudiante_id
-LEFT JOIN MULTAS m ON i.inscripcion_id = m.inscripcion_id
+FROM "ESTUDIANTES" e
+LEFT JOIN "INSCRIPCIONES" i ON e.estudiante_id = i.estudiante_id
+LEFT JOIN "MULTAS" m ON i.inscripcion_id = m.inscripcion_id
 WHERE m.multa_id IS NULL OR m.estado_pago = 'PENDIENTE'
 ORDER BY e.estudiante_id, i.sesion_id;
 
@@ -402,31 +402,31 @@ ORDER BY e.estudiante_id, i.sesion_id;
 
 -- Q16: UNION - Nombres de todos los actores (profesores + estudiantes)
 SELECT p.nombre AS nombre, 'Profesor' AS rol, p.email
-FROM PROFESORES p
+FROM "PROFESORES" p
 WHERE p.activo = TRUE
 UNION
 SELECT e.nombre AS nombre, 'Estudiante' AS rol, e.email
-FROM ESTUDIANTES e
+FROM "ESTUDIANTES" e
 ORDER BY nombre;
 
 -- Q17: EXCEPT - Profesores sin sesiones asignadas
 SELECT p.profesor_id, p.nombre
-FROM PROFESORES p
+FROM "PROFESORES" p
 EXCEPT
 SELECT DISTINCT p.profesor_id, p.nombre
-FROM PROFESORES p
-INNER JOIN SESIONES s ON p.profesor_id = s.profesor_id
+FROM "PROFESORES" p
+INNER JOIN "SESIONES" s ON p.profesor_id = s.profesor_id
 ORDER BY nombre;
 
 -- Q18: INTERSECT - Salones usados por profesores con especialidad en niveles avanzados
 SELECT sal.salon_id, sal.nombre
-FROM SALONES sal
-INNER JOIN SESIONES s ON sal.salon_id = s.salon_id
-INNER JOIN PROFESORES p ON s.profesor_id = p.profesor_id
+FROM "SALONES" sal
+INNER JOIN "SESIONES" s ON sal.salon_id = s.salon_id
+INNER JOIN "PROFESORES" p ON s.profesor_id = p.profesor_id
 WHERE p.especialidad IN ('B2', 'C1', 'C2')
 INTERSECT
 SELECT sal.salon_id, sal.nombre
-FROM SALONES sal
+FROM "SALONES" sal
 WHERE sal.capacidad >= 20
 ORDER BY nombre;
 
@@ -442,8 +442,8 @@ SELECT e.nombre,
        ROUND(100.0 * SUM(CASE WHEN i.estado_asistencia = 'ASISTIO' THEN 1 ELSE 0 END) / 
              NULLIF(COUNT(i.inscripcion_id), 0), 2) AS porcentaje_asistencia,
        e.saldo_pendiente
-FROM ESTUDIANTES e
-LEFT JOIN INSCRIPCIONES i ON e.estudiante_id = i.estudiante_id
+FROM "ESTUDIANTES" e
+LEFT JOIN "INSCRIPCIONES" i ON e.estudiante_id = i.estudiante_id
 GROUP BY e.estudiante_id, e.nombre, e.saldo_pendiente
 ORDER BY porcentaje_asistencia DESC;
 
@@ -470,7 +470,7 @@ DECLARE
 BEGIN
   -- Lock session row to prevent race conditions
   SELECT cupos_disponibles INTO v_cupos 
-  FROM SESIONES 
+  FROM "SESIONES" 
   WHERE sesion_id = p_sesion_id 
   FOR UPDATE;
   
@@ -483,12 +483,12 @@ BEGIN
   END IF;
 
   -- Insert inscription record
-  INSERT INTO INSCRIPCIONES (estudiante_id, sesion_id, estado_asistencia)
+  INSERT INTO "INSCRIPCIONES" (estudiante_id, sesion_id, estado_asistencia)
   VALUES (p_estudiante_id, p_sesion_id, 'PROGRAMADA')
-  RETURNING INSCRIPCIONES.inscripcion_id INTO v_insc_id;
+  RETURNING "INSCRIPCIONES".inscripcion_id INTO v_insc_id;
 
   -- Decrement available slots
-  UPDATE SESIONES SET cupos_disponibles = cupos_disponibles - 1 
+  UPDATE "SESIONES" SET cupos_disponibles = cupos_disponibles - 1 
   WHERE sesion_id = p_sesion_id;
 
   RETURN QUERY SELECT v_insc_id, 'Inscripción exitosa'::TEXT;
@@ -524,17 +524,17 @@ BEGIN
       
       -- Prevent duplicate multas for same inscription
       SELECT 1 INTO v_exists 
-      FROM MULTAS 
+      FROM "MULTAS" 
       WHERE inscripcion_id = NEW.inscripcion_id 
       LIMIT 1;
       
       IF NOT FOUND THEN
         -- Create fine record
-        INSERT INTO MULTAS (inscripcion_id, estudiante_id, monto, estado_pago)
+        INSERT INTO "MULTAS" (inscripcion_id, estudiante_id, monto, estado_pago)
         VALUES (NEW.inscripcion_id, NEW.estudiante_id, 10.00, 'PENDIENTE');
         
         -- Update student pending balance
-        UPDATE ESTUDIANTES 
+        UPDATE "ESTUDIANTES" 
         SET saldo_pendiente = saldo_pendiente + 10.00 
         WHERE estudiante_id = NEW.estudiante_id;
       END IF;
@@ -545,10 +545,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger on INSCRIPCIONES
-DROP TRIGGER IF EXISTS trg_multa_por_inasistencia ON INSCRIPCIONES;
+-- Create trigger on "INSCRIPCIONES"
+DROP TRIGGER IF EXISTS trg_multa_por_inasistencia ON "INSCRIPCIONES";
 CREATE TRIGGER trg_multa_por_inasistencia
-  AFTER UPDATE OF estado_asistencia ON INSCRIPCIONES
+  AFTER UPDATE OF estado_asistencia ON "INSCRIPCIONES"
   FOR EACH ROW
   EXECUTE FUNCTION trg_multa_por_inasistencia_fn();
 
@@ -560,34 +560,34 @@ CREATE TRIGGER trg_multa_por_inasistencia
 -- (Uncomment to test in live environment)
 /*
 -- Before: Check initial multas count
-SELECT COUNT(*) AS multas_antes FROM MULTAS;
+SELECT COUNT(*) AS multas_antes FROM "MULTAS";
 
 -- Update inscription to 'FALTO'
-UPDATE INSCRIPCIONES 
+UPDATE "INSCRIPCIONES" 
 SET estado_asistencia = 'FALTO' 
 WHERE inscripcion_id = 4;
 
 -- After: Verify multa was created
-SELECT COUNT(*) AS multas_despues FROM MULTAS;
+SELECT COUNT(*) AS multas_despues FROM "MULTAS";
 
 -- Verify saldo_pendiente increased
-SELECT estudiante_id, saldo_pendiente FROM ESTUDIANTES WHERE estudiante_id = 4;
+SELECT estudiante_id, saldo_pendiente FROM "ESTUDIANTES" WHERE estudiante_id = 4;
 
 -- View new multa
-SELECT * FROM MULTAS WHERE inscripcion_id = 4;
+SELECT * FROM "MULTAS" WHERE inscripcion_id = 4;
 */
 
 -- ============================================================================
 -- 12. INDEXES FOR PERFORMANCE (optional but recommended)
 -- ============================================================================
 
-CREATE INDEX idx_inscripciones_estudiante_id ON INSCRIPCIONES(estudiante_id);
-CREATE INDEX idx_inscripciones_sesion_id ON INSCRIPCIONES(sesion_id);
-CREATE INDEX idx_multas_estudiante_id ON MULTAS(estudiante_id);
-CREATE INDEX idx_multas_estado_pago ON MULTAS(estado_pago);
-CREATE INDEX idx_sesiones_nivel_id ON SESIONES(nivel_id);
-CREATE INDEX idx_sesiones_profesor_id ON SESIONES(profesor_id);
-CREATE INDEX idx_sesiones_salon_id ON SESIONES(salon_id);
+CREATE INDEX idx_inscripciones_estudiante_id ON "INSCRIPCIONES"(estudiante_id);
+CREATE INDEX idx_inscripciones_sesion_id ON "INSCRIPCIONES"(sesion_id);
+CREATE INDEX idx_multas_estudiante_id ON "MULTAS"(estudiante_id);
+CREATE INDEX idx_multas_estado_pago ON "MULTAS"(estado_pago);
+CREATE INDEX idx_sesiones_nivel_id ON "SESIONES"(nivel_id);
+CREATE INDEX idx_sesiones_profesor_id ON "SESIONES"(profesor_id);
+CREATE INDEX idx_sesiones_salon_id ON "SESIONES"(salon_id);
 
 -- ============================================================================
 -- FINAL VERIFICATION QUERIES
@@ -595,13 +595,13 @@ CREATE INDEX idx_sesiones_salon_id ON SESIONES(salon_id);
 
 -- View database summary
 SELECT 
-  (SELECT COUNT(*) FROM NIVELES) AS total_niveles,
-  (SELECT COUNT(*) FROM PROFESORES) AS total_profesores,
-  (SELECT COUNT(*) FROM SALONES) AS total_salones,
-  (SELECT COUNT(*) FROM ESTUDIANTES) AS total_estudiantes,
-  (SELECT COUNT(*) FROM SESIONES) AS total_sesiones,
-  (SELECT COUNT(*) FROM INSCRIPCIONES) AS total_inscripciones,
-  (SELECT COUNT(*) FROM MULTAS) AS total_multas;
+  (SELECT COUNT(*) FROM "NIVELES") AS total_niveles,
+  (SELECT COUNT(*) FROM "PROFESORES") AS total_profesores,
+  (SELECT COUNT(*) FROM "SALONES") AS total_salones,
+  (SELECT COUNT(*) FROM "ESTUDIANTES") AS total_estudiantes,
+  (SELECT COUNT(*) FROM "SESIONES") AS total_sesiones,
+  (SELECT COUNT(*) FROM "INSCRIPCIONES") AS total_inscripciones,
+  (SELECT COUNT(*) FROM "MULTAS") AS total_multas;
 
 -- ============================================================================
 -- END OF SCRIPT
